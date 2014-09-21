@@ -1,0 +1,52 @@
+{
+  "name": "react-webaudio",
+  "version": "0.1.0-EXPERIMENTAL",
+  "description": "Construct and update a Web Audio graph using React",
+  "keywords": [
+    "react",
+    "pixi",
+    "webGL",
+    "canvas"
+  ],
+  "author": {
+    "name": "Gary Haussmann",
+    "email": "gjhaussmann@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Izzimach/react-webaudio"
+  },
+  "license": "Apache-2.0",
+  "main": "build/react-webaudio.js",
+  "dependencies": {
+    "react": "0.11.1"
+  },
+  "devDependencies": {
+    "browserify": "~4.1.0",
+    "gulp": "~3.6.0",
+    "gulp-concat": "~2.2.0",
+    "gulp-header": "~1.1.1",
+    "gulp-jshint": "~1.5.1",
+    "gulp-livereload": "~1.2.0",
+    "gulp-rename": "~1.2.0",
+    "gulp-replace": "^0.4.0",
+    "gulp-streamify": "0.0.5",
+    "gulp-uglify": "~0.2.1",
+    "gulp-util": "~2.2.14",
+    "http": "0.0.0",
+    "jshint-stylish": "~0.1.5",
+    "karma": "~0.12.3",
+    "karma-chrome-launcher": "~0.1.3",
+    "karma-firefox-launcher": "~0.1.3",
+    "karma-jasmine": "~0.2.2",
+    "node-static": "~0.7.3",
+    "react-tools": "~0.10.0",
+    "vinyl-source-stream": "~0.1.1"
+  },
+  "scripts": {
+    "test": "gulp test"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  }
+}
