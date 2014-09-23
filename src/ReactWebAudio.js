@@ -110,12 +110,8 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
     /* jshint unused: vars */
     ReactComponentMixin.mountComponent.apply(this, arguments);
 
-    var audiocontext = findAudioContext(rootID);
-    this._audioNode = this.createAudioNode(audiocontext);
-    this.applyAudioNodeProps({}, this.props);
-    this.applySpecificAudioNodeProps({}, this.props);
-
-    return this._audioNode;
+    this._audioContext = findAudioContext(rootID);
+    return this.buildAudioNode();
   },
 
   receiveComponent: function(nextDescriptor, transaction) {
@@ -136,6 +132,46 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
     /* jshint unused: vars */
   },
 
+  connectAudio: function (connecttarget) {
+    if (typeof this._audioConnections === "undefined") {
+      this._audioConnections = [];
+    }
+    this._audioNode.connect(connecttarget._audioNode);
+    this._audioConnections.push(connecttarget);
+  },
+
+  disconnectAudio: function (disconnecttarget) {
+    var connectionindex = this._audioConnections.indexOf(disconnecttarget);
+    if (connectionindex >= 0) {
+      this._audioNode.disconnect();
+      this._audioConnections.splice(connectionindex,1);
+      // reconnect the remaining ones?
+
+    }
+  },
+
+  buildAudioNode: function() {
+    this._audioNode = this.createAudioNode(this._audioContext);
+    this.applyAudioNodeProps({}, this.props);
+    this.applySpecificAudioNodeProps({}, this.props);
+    return this._audioNode;
+  },
+
+  rebuildAudioNode: function () {
+    // disconnect old audio nodes
+    //this._audioNode.disconnect();
+
+    // build and connect the new node
+    var newaudionode = this.buildAudioNode();
+    this._audioNode = newaudionode;
+
+    this._audioConnections.forEach(function (connectto) {
+      newaudionode.connect(connectto._audioNode);
+    });
+
+    return newaudionode;
+  },
+
   mountComponentIntoNode: function() {
     throw new Error(
       'You cannot render a Web Audio component standalone. ' +
@@ -145,6 +181,58 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
 
 });
 
+//
+// audionodes that support start/stop via the "playing" prop
+//
+
+var PlayableNodeMixin = {
+  setPlayState: function(newstate) {
+    this._playState = newstate;
+  },
+
+  // used by nodes that support start/stop via the "playing" property
+  applyPlayingProp: function(oldProps, props) {
+    if (typeof props.playing !== "undefined") {
+      // start or stop?
+      if (props.playing === true) {
+        switch (this._playState) {
+          case "ready":
+            this._audioNode.start();
+            this.setPlayState("playing");
+            break;
+          case "playing":
+            break;
+          case "played":
+            // need to make a new node here
+            this.rebuildAudioNode();
+            // this builds a new node and recursively calls applySpecificAudioNodeProps,
+            // which will fall through to the "ready" case and start playing.
+            // so we don't want to call start() here.
+            return;
+          default:
+            break;
+        }
+      } else {
+        switch (this._playState) {
+          case "ready":
+            break;
+          case "playing":
+            this._audioNode.stop();
+            this.setPlayState("played");
+            break;
+          case "played":
+            break;
+          default:
+            break;
+        }
+      }
+    }
+  }
+};
+
+//
+// AudioNodes allow for inputs as well as outputs
+//
 
 var AudioNodeMixin = merge(merge(OutputAudioNodeMixin, ReactMultiChild.Mixin), {
 
@@ -193,16 +281,13 @@ var AudioNodeMixin = merge(merge(OutputAudioNodeMixin, ReactMultiChild.Mixin), {
   },
 
   createChild: function(child, childAudioNode) {
-    child._mountImage = childAudioNode;
-
+    /* jshint unused: vars */
     // connect the child to our AuduoNode
-    child._mountImage.connect(this._audioNode);
+    child.connectAudio(this);
   },
 
   removeChild: function(child) {
-    var childAudioNode = child._mountImage;
-
-    childAudioNode.disconnect(0);
+    child.disconnectAudio(this);
 
     child._mountImage = null;
   },
@@ -232,7 +317,7 @@ var AudioNodeMixin = merge(merge(OutputAudioNodeMixin, ReactMultiChild.Mixin), {
       if (this._renderedChildren.hasOwnProperty(key)) {
         var child = this._renderedChildren[key];
         child._mountImage = mountedImages[i];
-        child._mountImage.connect(this._audioNode);
+        child.connectAudio(this);
         i++;
       }
     }
@@ -252,8 +337,8 @@ var WebAudioContext = defineWebAudioComponent(
     mountComponent: function(rootID, transaction, mountDepth) {
       /* jshint unused: vars */
       AudioNodeMixin.mountComponent.apply(this, arguments);
-
       transaction.getReactMountReady().enqueue(this.componentDidMount, this);
+
       // Temporary placeholder
       var idMarkup = DOMPropertyOperations.createMarkupForID(rootID);
       return '<div ' + idMarkup + '></div>';
@@ -276,6 +361,11 @@ var WebAudioContext = defineWebAudioComponent(
 
     componentDidMount: function() {
       this.props = this._descriptor.props;
+
+      // invoke an audiocontextcallback if it exists
+      if (this.props.audiocontextcallback) {
+        this.props.audiocontextcallback.call(null, this._audioContext);
+      }
     },
 
     // the audiocontext provides a div, so it can mount into a node
@@ -288,9 +378,10 @@ var WebAudioContext = defineWebAudioComponent(
 var OscillatorNode = defineWebAudioComponent(
   'OscillatorNode',
   ReactComponentMixin,
-  OutputAudioNodeMixin, {
+  OutputAudioNodeMixin,
+  PlayableNodeMixin, {
     createAudioNode : function(audiocontext) {
-      this._playState = "ready";
+      this.setPlayState("ready");
       return audiocontext.createOscillator();
     },
 
@@ -302,37 +393,36 @@ var OscillatorNode = defineWebAudioComponent(
       if (typeof props.frequency !== "undefined") {
         oscillatorNode.frequency.value = props.frequency;
       }
-      if (typeof props.playing !== "undefined") {
-        // start or stop?
-        if (props.playing === true) {
-          switch (this._playState) {
-            case "ready":
-              this._audioNode.start();
-              this._playState = "playing";
-              break;
-            case "playing":
-              break;
-            case "played":
-              // need to make a new node here
-              break;
-            default:
-              break;
-          }
-        } else {
-          switch (this._playState) {
-            case "ready":
-              break;
-            case "playing":
-              this._audioNode.stop();
-              this._playState = "played";
-              break;
-            case "played":
-              break;
-            default:
-              break;
-          }
-        }
+      this.applyPlayingProp(oldProps, props);
+    }
+  }
+);
+
+var AudioBufferSourceNode = defineWebAudioComponent(
+  'AudioBufferSourceNode',
+  ReactComponentMixin,
+  OutputAudioNodeMixin,
+  PlayableNodeMixin, {
+    createAudioNode: function(audiocontext) {
+      this.setPlayState("ready");
+      return audiocontext.createBufferSource();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      var bufferSourceNode = this._audioNode;
+      if (typeof props.buffer !== "undefined") {
+        bufferSourceNode.buffer = props.buffer;
       }
+      if (typeof props.loop !== "undefined") {
+        bufferSourceNode.loop.value = props.loop;
+      }
+      if (typeof props.loopStart !== "undefined") {
+        bufferSourceNode.loopStart.value = props.loopStart;
+      }
+      if (typeof props.loopEnd !== "undefined") {
+        bufferSourceNode.loopEnd.value = props.loopEnd;
+      }
+      this.applyPlayingProp(oldProps, props);
     }
   }
 );
@@ -377,7 +467,7 @@ function findAudioNodeChild(componentinstance) {
 // time to monkey-patch React!
 //
 // a subtle bug happens when ReactCompositeComponent updates something in-place by
-// modifying HTML markup; since WEb Audio objects don't exist as markup the whole thing bombs.
+// modifying HTML markup; since Web Audio objects don't exist as markup the whole thing bombs.
 // we try to fix this by monkey-patching ReactCompositeComponent
 //
 
@@ -435,5 +525,6 @@ function createWebAudioClass(spec) {
 module.exports =  {
   AudioContext: WebAudioContext,
   OscillatorNode: OscillatorNode,
+  AudioBufferSourceNode: AudioBufferSourceNode,
   createClass: createWebAudioClass,
 };
