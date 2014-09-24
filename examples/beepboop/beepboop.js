@@ -11,7 +11,7 @@
 // - beepfreq: frequency to use for beeping
 //
 
-var ExampleBeeper = React.createClass({
+var ExampleBeeper = ReactWebAudio.createClass({
   displayName: 'ExampleBeeper',
   propTypes: {
     beepfreq: React.PropTypes.number.isRequired,
@@ -21,11 +21,11 @@ var ExampleBeeper = React.createClass({
   render: function() {
     return React.DOM.div(
       {},
-      React.DOM.div({}, "Current frequency: " + this.props.beepfreq),
-      React.DOM.button({onClick:this.props.higherFreq},"higher"),
-      React.DOM.button({onClick:this.props.lowerFreq}, "lower"),
-      React.DOM.button({onClick:this.props.startBeep}, "Start"),
-      React.DOM.button({onClick:this.props.stopBeep}, "Stop"),
+      React.DOM.div({key:"info"}, "Current frequency: " + this.props.beepfreq),
+      React.DOM.button({key:"b1", onClick:this.props.higherFreq},"higher"),
+      React.DOM.button({key:"b2", onClick:this.props.lowerFreq}, "lower"),
+      React.DOM.button({key:"b3", onClick:this.props.startBeep}, "Start"),
+      React.DOM.button({key:"b4", onClick:this.props.stopBeep}, "Stop"),
       ReactWebAudio.AudioContext(
         {},
         ReactWebAudio.OscillatorNode({frequency:this.props.beepfreq, playing:this.props.playbeep}))
