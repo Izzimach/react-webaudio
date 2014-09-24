@@ -192,39 +192,38 @@ var PlayableNodeMixin = {
 
   // used by nodes that support start/stop via the "playing" property
   applyPlayingProp: function(oldProps, props) {
-    if (typeof props.playing !== "undefined") {
-      // start or stop?
-      if (props.playing === true) {
-        switch (this._playState) {
-          case "ready":
-            this._audioNode.start();
-            this.setPlayState("playing");
-            break;
-          case "playing":
-            break;
-          case "played":
-            // need to make a new node here
-            this.rebuildAudioNode();
-            // this builds a new node and recursively calls applySpecificAudioNodeProps,
-            // which will fall through to the "ready" case and start playing.
-            // so we don't want to call start() here.
-            return;
-          default:
-            break;
-        }
-      } else {
-        switch (this._playState) {
-          case "ready":
-            break;
-          case "playing":
-            this._audioNode.stop();
-            this.setPlayState("played");
-            break;
-          case "played":
-            break;
-          default:
-            break;
-        }
+    // by default nodes play on creation unless you tell them not to (playing=false)
+    var isplaying = (typeof props.playing === "undefined") ? true : props.playing;
+
+    if (isplaying) {
+      switch (this._playState) {
+        case "ready": // ready to play so start it
+          this._audioNode.start();
+          this.setPlayState("playing");
+          break;
+        case "playing": // already playing, so no-op
+          break;
+        case "played": // already played, so we need to make a new node here
+          // this builds a new node and recursively calls applySpecificAudioNodeProps,
+          // which will fall through to the "ready" case and start playing.
+          // so we don't want to call start() here.
+          this.rebuildAudioNode();
+          return;
+        default:
+          break;
+      }
+    } else {
+      switch (this._playState) {
+        case "ready": // ready means its not running
+          break;
+        case "playing": // stop it!
+          this._audioNode.stop();
+          this.setPlayState("played");
+          break;
+        case "played": // already stopped
+          break;
+        default:
+          break;
       }
     }
   }
