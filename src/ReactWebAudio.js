@@ -409,16 +409,20 @@ var AudioBufferSourceNode = defineWebAudioComponent(
 
     applySpecificAudioNodeProps: function (oldProps, props) {
       var bufferSourceNode = this._audioNode;
-      if (typeof props.buffer !== "undefined") {
+      if (typeof props.buffer !== "undefined" &&
+         props.buffer !== oldProps.buffer) {
         bufferSourceNode.buffer = props.buffer;
       }
-      if (typeof props.loop !== "undefined") {
+      if (typeof props.loop !== "undefined" &&
+         props.loop !== oldProps.loop) {
         bufferSourceNode.loop.value = props.loop;
       }
-      if (typeof props.loopStart !== "undefined") {
+      if (typeof props.loopStart !== "undefined" &&
+         props.loopStart !== oldProps.loopStart) {
         bufferSourceNode.loopStart.value = props.loopStart;
       }
-      if (typeof props.loopEnd !== "undefined") {
+      if (typeof props.loopEnd !== "undefined" &&
+         props.loopEnd !== oldProps.loopEnd) {
         bufferSourceNode.loopEnd.value = props.loopEnd;
       }
       this.applyPlayingProp(oldProps, props);
