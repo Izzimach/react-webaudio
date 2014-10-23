@@ -6,8 +6,22 @@
     <title>React-webaudio test: play an audio buffer</title>
     <style>
         #webaudio-div div {
+            width: 900px;
+            margin-left:auto;
+            margin-right:auto;
+        }
+        #webaudio-div .sound-item {
+            border: 2px solid black;
+            border-radius: 3px;
+            padding: 5px;
+            margin: 2px;
+        }
+        #webaudio-div .sound-item button {
+            background: #c0c0ff;
+            border-radius: 3px;
         }
     </style>
+    <script src="../../bower_components/lodash/dist/lodash.js"></script>
     <script src="../../build/react-webaudio.js"></script>
     <script src="playbuffer.js"></script>
 </head>

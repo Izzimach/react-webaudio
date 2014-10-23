@@ -115,11 +115,18 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
   },
 
   receiveComponent: function(nextDescriptor, transaction) {
+    var oldProps = this.props;
+    var props = nextDescriptor.props;
+
     ReactComponent.Mixin.receiveComponent.call(this, nextDescriptor, transaction);
 
-    var props = nextDescriptor.props;
-    this.applyAudioNodeProps(this.props, props);
-    this.applySpecificAudioNodeProps(this.props, props);
+    // might need to rebuild/restart the node
+    if (this.shouldRebuildNode && this.shouldRebuildNode(oldProps, props)) {
+      this.rebuildAudioNode();
+    } else {
+      this.applyAudioNodeProps(oldProps, props);
+      this.applySpecificAudioNodeProps(oldProps, props);
+    }
 
     this.props = props;
   },
@@ -143,10 +150,8 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
   disconnectAudio: function (disconnecttarget) {
     var connectionindex = this._audioConnections.indexOf(disconnecttarget);
     if (connectionindex >= 0) {
-      this._audioNode.disconnect();
+      this._audioNode.disconnect(disconnecttarget._audioNode);
       this._audioConnections.splice(connectionindex,1);
-      // reconnect the remaining ones?
-
     }
   },
 
@@ -155,21 +160,6 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
     this.applyAudioNodeProps({}, this.props);
     this.applySpecificAudioNodeProps({}, this.props);
     return this._audioNode;
-  },
-
-  rebuildAudioNode: function () {
-    // disconnect old audio nodes
-    //this._audioNode.disconnect();
-
-    // build and connect the new node
-    var newaudionode = this.buildAudioNode();
-    this._audioNode = newaudionode;
-
-    this._audioConnections.forEach(function (connectto) {
-      newaudionode.connect(connectto._audioNode);
-    });
-
-    return newaudionode;
   },
 
   mountComponentIntoNode: function() {
@@ -182,12 +172,38 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
 });
 
 //
-// audionodes that support start/stop via the "playing" prop
+// Audionodes that support start/stop via the "playing" prop.
+// Since playable nodes can only be started once, we have to rebuild/replace
+// the node for each start/stop cycle.
 //
 
 var PlayableNodeMixin = {
   setPlayState: function(newstate) {
     this._playState = newstate;
+  },
+
+  shouldRebuildNode: function (oldProps, props) {
+    // the 'triggerkey' prop can be use to restart a playable node
+    return (props.triggerkey !== oldProps.triggerkey && this._playState !== "ready");
+  },
+
+  rebuildAudioNode: function () {
+    // disconnect old audio nodes
+    if (typeof this._audioNode !== "undefined") {
+      this._audioConnections.forEach(function(disconnectto) {
+        this._audioNode.disconnect(disconnectto._audioNode);
+      }, this);
+    }
+
+    // build and connect the new node
+    var newaudionode = this.buildAudioNode();
+    this._audioNode = newaudionode;
+
+    this._audioConnections.forEach(function (connectto) {
+      newaudionode.connect(connectto._audioNode);
+    });
+
+    return newaudionode;
   },
 
   // used by nodes that support start/stop via the "playing" property
@@ -210,6 +226,7 @@ var PlayableNodeMixin = {
           this.rebuildAudioNode();
           return;
         default:
+          // need to generate a warning that the play state was not properly set/initialized
           break;
       }
     } else {
@@ -430,6 +447,37 @@ var AudioBufferSourceNode = defineWebAudioComponent(
   }
 );
 
+var MediaElementAudioSourceNode = defineWebAudioComponent(
+  'MediaElementAudioSourceNode',
+  ReactComponentMixin,
+  OutputAudioNodeMixin, {
+    createAudioNode: function(audiocontext) {
+	/* jshint unused: vars */
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+	/* jshint unused: vars */
+	//var audioSourceNode = this._audioNode;
+    }
+  }
+);
+
+var GainNode = defineWebAudioComponent(
+  'GainNode',
+  ReactComponentMixin,
+  AudioNodeMixin, {
+    createAudioNode: function(audiocontext) {
+      return audiocontext.createGain();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      if (typeof props.gain !== "undefined") {
+        this._audioNode.gain.value = props.gain;
+      }
+    }
+  }
+);
+
 //
 // Composite components don't have an _audioNode member. So we have to do some work to find
 // the proper AudioNode sometimes.
@@ -529,5 +577,7 @@ module.exports =  {
   AudioContext: WebAudioContext,
   OscillatorNode: OscillatorNode,
   AudioBufferSourceNode: AudioBufferSourceNode,
+  MediaElementAudioSourceNode: MediaElementAudioSourceNode,
+  GainNode: GainNode,
   createClass: createWebAudioClass,
 };
