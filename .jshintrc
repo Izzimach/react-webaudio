@@ -6,6 +6,8 @@
 	"globals" : {
 	  "module" : false,
 	  "require" : false,
-    "AudioContext": false
+	  "AudioContext": false,
+	  "AudioBuffer": false,
+	  "_" : false
 	}
 }
