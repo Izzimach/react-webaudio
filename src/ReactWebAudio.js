@@ -450,14 +450,33 @@ var AudioBufferSourceNode = defineWebAudioComponent(
 var MediaElementAudioSourceNode = defineWebAudioComponent(
   'MediaElementAudioSourceNode',
   ReactComponentMixin,
-  OutputAudioNodeMixin, {
+  OutputAudioNodeMixin,
+  PlayableNodeMixin, {
     createAudioNode: function(audiocontext) {
-	/* jshint unused: vars */
+      /* jshint unused: vars */
+      this.setPlayState("ready");
+      return audiocontext.createMediaElementSource(this.props.audiosourceelement);
     },
 
     applySpecificAudioNodeProps: function (oldProps, props) {
-	/* jshint unused: vars */
-	//var audioSourceNode = this._audioNode;
+      /* jshint unused: vars */
+    }
+  }
+);
+
+var MediaStreamAudioSourceNode = defineWebAudioComponent(
+  'MediaStreamAudioSourceNode',
+  ReactComponentMixin,
+  OutputAudioNodeMixin,
+  PlayableNodeMixin, {
+    createAudioNode: function(audiocontext) {
+      /* jshint unused: vars */
+      this.setPlayState("ready");
+      return audiocontext.createMediaStreamSource(this.props.audiosourcestream);
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      /* jshint unused: vars */
     }
   }
 );
@@ -477,6 +496,7 @@ var GainNode = defineWebAudioComponent(
     }
   }
 );
+
 
 //
 // Composite components don't have an _audioNode member. So we have to do some work to find
@@ -578,6 +598,7 @@ module.exports =  {
   OscillatorNode: OscillatorNode,
   AudioBufferSourceNode: AudioBufferSourceNode,
   MediaElementAudioSourceNode: MediaElementAudioSourceNode,
+  MediaStreamAudioSourceNode: MediaStreamAudioSourceNode,
   GainNode: GainNode,
   createClass: createWebAudioClass,
 };
