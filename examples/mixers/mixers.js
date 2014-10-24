@@ -11,8 +11,11 @@
 // Slider element to display/set some prop
 //
 
-var FilterKnob = react.CreateClass({
-  displayName:
+var FilterKnob = React.createClass({
+  displayName: 'FilterKnob',
+  render: function() {
+    return null;
+  }
 });
 
 //
