@@ -9,6 +9,10 @@
 // The top level component
 // props:
 // - beepfreq: frequency to use for beeping
+// - higherFreq: call this func to increase beep frequency
+// - lowerFreq: call this func to decrease beep frequency
+// - startBeep: call this func to start beep sound
+// - stopBeeo: call this func to stop beep sound
 //
 
 var ExampleBeeper = ReactWebAudio.createClass({
@@ -16,7 +20,9 @@ var ExampleBeeper = ReactWebAudio.createClass({
   propTypes: {
     beepfreq: React.PropTypes.number.isRequired,
     higherFreq: React.PropTypes.func.isRequired,
-    lowerFreq: React.PropTypes.func.isRequired
+    lowerFreq:  React.PropTypes.func.isRequired,
+    startBeep:  React.PropTypes.func.isRequired,
+    stopBeep:   React.PropTypes.func.isRequired
   },
   render: function() {
     return React.DOM.div(
@@ -76,4 +82,3 @@ function beepboopstart() {
 
   renderinstance = React.renderComponent(ExampleBeeper(appstate), renderelement);
 }
-

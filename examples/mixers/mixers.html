@@ -1,0 +1,27 @@
+<!DOCTYPE html><html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+
+    <title>React-webaudio example: Mixer Nodes</title>
+    <style>
+        #webaudio-div div {
+        }
+    </style>
+    <script src="/bower_components/lodash/dist/lodash.js"></script>
+    <script src="/build/react-webaudio.js"></script>
+    <script src="mixers.js"></script>
+</head>
+<body>
+    <!-- GUI and audiograph go here -->
+    <div id="webaudio-div"></div>
+
+    <div>Start, Pause, and Rewind the Audio here:
+      <audio id="audiosource" controls="yeargh" loop="true" src="../assets/Poofy Reel.mp3"></audio>
+    </div>
+
+    <script>
+    window.onload = mixerstart;
+    </script>
+ </body>
+</html>
