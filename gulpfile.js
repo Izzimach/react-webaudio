@@ -118,12 +118,9 @@ gulp.task('watch', ['bundle'], function() {
 });
 
 gulp.task('livereload', ['lint','bundle'], function() {
-  var nodestatic = require('node-static');
-  var fileserver = new nodestatic.Server('.');
+  var send = require('send');
   require('http').createServer(function(request, response) {
-    request.addListener('end', function() {
-      fileserver.serve(request,response);
-    }).resume();
+    send(request,request.url, {root:"."}).pipe(response);
   }).listen(SERVERPORT);
 
   var livereloadserver = livereload();
@@ -143,4 +140,3 @@ gulp.task('test', ['bundle'], function() {
 });
 
 gulp.task('default', ['lint','bundle']);
-
