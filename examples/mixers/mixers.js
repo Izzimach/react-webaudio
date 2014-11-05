@@ -7,6 +7,37 @@
 /* global React : false */
 /* global ReactWebAudio : false */
 
+
+//
+// Some prop filters
+//
+
+function isAudioElement (props, propName, componentName) {
+  /* jshint unused: vars */
+  var obj = props[propName];
+  if (!obj.nodeName || obj.nodeName !== "audio") {
+     return new Error("Need an audio HTML element for " + propName + " property in component " + componentName);
+  }
+}
+
+function isFilterType (props, propName, componentName) {
+  /* jshint unused: vars */
+  var obj = props[propName];
+  if (typeof obj !== "string" || obj !== "lowpass" || obj !== "highpass") {
+    return new Error(propName + " property must be a string set to 'lowpass' or 'highpass' in component " + componentName);
+  }
+}
+
+function isNumberInRange(minvalue, maxvalue) {
+  return function (props, propName, componentName) {
+    /* jshint unused: vars */
+    var obj = props[propName];
+    if (typeof obj !== "number" || obj < minvalue || obj > maxvalue) {
+      return new Error(propName + " must be a number between " + minvalue.toString() + " and " + maxvalue.toString());
+    }
+  };
+}
+
 //
 // Slider element to display/set some prop
 //
@@ -53,34 +84,18 @@ var FilterChain = ReactWebAudio.createClass({
 var FilterExample = ReactWebAudio.createClass({
   displayName: 'FilterExample',
   propTypes: {
-    audioElement: function (props, propName, componentName) {
-      /* jshint unused: vars */
-      var obj = props[propName];
-      if (!obj.nodeName || obj.nodeName !== "audio") {
-	       return new Error("Need an audio HTML element for FilterChain!");
-      }
-    },
+    audioElement: isAudioElement,
     gain: React.PropTypes.number.isRequired,
-    filterType: function (props, propName, componentName) {
-      /* jshint unused: vars */
-      var obj = props[propName];
-      if (typeof obj !== "string" || obj !== "lowpass" || obj !== "highpass") {
-        return new Error("filtertype property must be a string set to 'lowpass' or 'highpass'");
-      }
-    },
+    filterType: isFilterType,
     filterFrequency: React.PropTypes.number.isRequired,
-    distortionStrength: function (props, propName, componentName) {
-      /* jshint unused: vars */
-      var obj = props[propName];
-      if (typeof obj !== "number" || obj < 0 || obj > 10) {
-        return new Error("distortionStrength must be a number between 0 and 10");
-      }
-    }
+    distortionStrength: isNumberInRange(0,10)
   },
   render: function() {
     return React.DOM.div(
       {},
+      // displays DOM widgets
       AudioWidgets(this.props),
+      // controls audio graph
       FilterChain(this.props)
     );
   }
