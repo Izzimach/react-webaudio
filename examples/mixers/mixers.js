@@ -12,23 +12,25 @@
 // Some prop filters
 //
 
-function isAudioElement (props, propName, componentName) {
+function propIsAudioElement (props, propName, componentName) {
   /* jshint unused: vars */
   var obj = props[propName];
-  if (!obj.nodeName || obj.nodeName !== "audio") {
+  if (!obj.nodeName || obj.nodeName.toLowerCase() !== "audio") {
      return new Error("Need an audio HTML element for " + propName + " property in component " + componentName);
   }
 }
 
-function isFilterType (props, propName, componentName) {
-  /* jshint unused: vars */
-  var obj = props[propName];
-  if (typeof obj !== "string" || obj !== "lowpass" || obj !== "highpass") {
-    return new Error(propName + " property must be a string set to 'lowpass' or 'highpass' in component " + componentName);
-  }
+function propIsStringInList (allowedstringslist) {
+  return function (props, propName, componentName) {
+    /* jshint unused: vars */
+    var obj = props[propName];
+    if (typeof obj !== "string" || !_.contains(allowedstringslist, obj)) {
+      return new Error(propName + " property must be a string set to one of: " + allowedstringslist.join(',') + " in component " + componentName);
+    }
+  };
 }
 
-function isNumberInRange(minvalue, maxvalue) {
+function propIsNumberInRange(minvalue, maxvalue) {
   return function (props, propName, componentName) {
     /* jshint unused: vars */
     var obj = props[propName];
@@ -45,7 +47,7 @@ function isNumberInRange(minvalue, maxvalue) {
 var FilterKnob = React.createClass({
   displayName: 'FilterKnob',
   render: function() {
-    return null;
+    return React.DOM.div();
   }
 });
 
@@ -61,7 +63,8 @@ var AudioWidgets = React.createClass({
 });
 
 //
-// Component that instantiates a bunch of audio nodes to play the sounds provided
+// Component that instantiates a bunch of audio nodes to play and process
+// the sounds provided
 //
 
 var FilterChain = ReactWebAudio.createClass({
@@ -71,24 +74,28 @@ var FilterChain = ReactWebAudio.createClass({
   render: function() {
     return ReactWebAudio.AudioContext(
       {},
-      ReactWebAudio.GainNode({gain:0.5},
-        ReactWebAudio.MediaElementAudioSourceNode({audiosourceelement: this.props.audioElement}))
+      // ok, this chaining is less than ideal...
+      ReactWebAudio.GainNode({gain: this.props.gain},
+        ReactWebAudio.ConvolverNode({bufferAsArray: this.props.reverbImpulseResponse},
+          ReactWebAudio.BiquadFilterNode({frequency: this.props.filterFrequency, type: this.props.filterType},
+            ReactWebAudio.MediaElementAudioSourceNode({audiosourceelement: this.props.audioElement}))))
     );
   }
 });
 
 //
-// filter/process audio
+// Combines the DOM interface and the Web Audio graph
 //
 
 var FilterExample = ReactWebAudio.createClass({
   displayName: 'FilterExample',
   propTypes: {
-    audioElement: isAudioElement,
+    audioElement: propIsAudioElement,
     gain: React.PropTypes.number.isRequired,
-    filterType: isFilterType,
+    filterType: propIsStringInList(['lowpass','highpass']),
     filterFrequency: React.PropTypes.number.isRequired,
-    distortionStrength: isNumberInRange(0,10)
+    reverbImpulseResponse: React.PropTypes.object.isRequired, // Float32Array
+    distortionStrength: propIsNumberInRange(0,10)
   },
   render: function() {
     return React.DOM.div(
@@ -102,9 +109,35 @@ var FilterExample = ReactWebAudio.createClass({
 });
 
 //
+// Builds a simple impulse response buffer that produces a basic echo
+//
+
+function buildSimpleReverb(samplelength, echoamplitude) {
+  var freshbuffer = new Float32Array(samplelength+1);
+  var echospacing = 2500;
+  var echocount = samplelength / echospacing;
+  var echoindex = 0;
+
+  for (echoindex=0; echoindex < echocount; echoindex++) {
+    freshbuffer[echoindex * echospacing] = Math.pow(echoamplitude, echoindex);
+  }
+
+  return freshbuffer;
+}
+
+//
 // the app state holds various filtering parameters
 //
-var g_appstate = {audioElement: null, gain:1, filterType:"lowpass", filterFrequency:1000, distortionStrength:3};
+
+var g_appstate = {
+  audioElement: null,
+  gain:1,
+  filterType:"lowpass",
+  filterFrequency:7000,
+  distortionStrength:3,
+  reverbImpulseResponse: buildSimpleReverb(40000, 0.0)
+};
+
 var g_reactinstance = null;
 
 // update the named app state with the specified value
