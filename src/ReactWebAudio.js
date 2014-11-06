@@ -405,6 +405,14 @@ var OscillatorNode = defineWebAudioComponent(
       var oscillatorNode = this._audioNode;
       if (typeof props.type !== "undefined") {
         oscillatorNode.type = props.type;
+
+        // custom type? then set the wave table
+        if (props.type === "custom" &&
+          typeof props.periodicWave !== "undefined" &&
+          props.type !== oldProps.type &&
+          props.periodicWave !== oldProps.periodicWave) {
+            oscillatorNode.setPeriodicWave(props.periodicWave);
+          }
       }
       if (typeof props.frequency !== "undefined") {
         oscillatorNode.frequency.value = props.frequency;
@@ -579,6 +587,71 @@ var ConvolverNode = defineWebAudioComponent(
   }
 );
 
+var DelayNode = defineWebAudioComponent(
+  'DelayNode',
+  ReactComponentMixin,
+  AudioNodeMixin, {
+    createAudioNode: function(audiocontext) {
+      return audiocontext.createDelay();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      if (typeof props.delayTime !== "undefined") {
+        this._audioNode.delayTime.value = props.delayTime;
+      }
+    }
+  }
+);
+
+var DynamicsCompressorNode = defineWebAudioComponent(
+  'DynamicsCompressorNode',
+  ReactComponentMixin,
+  AudioNodeMixin, {
+    createAudioNode: function (audiocontext) {
+      return audiocontext.createDynamicsCompressor();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      if (typeof props.threshold !== "undefined") {
+          this._audioNode.threshold.value = props.threshold;
+      }
+      if (typeof props.knee !== "undefined") {
+          this._audioNode.knee.value = props.knee;
+      }
+      if (typeof props.ratio !== "undefined") {
+          this._audioNode.ratio.value = props.ratio;
+      }
+      if (typeof props.reduction !== "undefined") {
+          this._audioNode.reduction.value = props.reduction;
+      }
+      if (typeof props.attack !== "undefined") {
+          this._audioNode.attack.value = props.attack;
+      }
+      if (typeof props.release !== "undefined") {
+          this._audioNode.release.value = props.release;
+      }
+    }
+  }
+);
+
+var WaveShaperNode = defineWebAudioComponent(
+  'WaveShaperNode',
+  ReactComponentMixin,
+  AudioNodeMixin, {
+    createAudioNode: function (audiocontext) {
+      return audiocontext.createWaveShaper();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      if (typeof props.curve !== "undefined") {
+          this._audioNode.curve = props.curve;
+      }
+      if (typeof props.oversample !== "undefined") {
+          this._audioNode.oversample = props.oversample;
+      }
+    }
+  }
+);
 //
 // Composite components don't have an _audioNode member. So we have to do some work to find
 // the proper AudioNode sometimes.
@@ -683,5 +756,8 @@ module.exports =  {
   BiquadFilterNode: BiquadFilterNode,
   GainNode: GainNode,
   ConvolverNode: ConvolverNode,
+  DelayNode: DelayNode,
+  DynamicsCompressorNode: DynamicsCompressorNode,
+  WaveShaperNode: WaveShaperNode,
   createClass: createWebAudioClass,
 };
