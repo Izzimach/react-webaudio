@@ -497,6 +497,87 @@ var GainNode = defineWebAudioComponent(
   }
 );
 
+var filtertypes = ["lowpass","highpass","bandpass","lowshelf","highshelf","peaking","notch","allpass"];
+
+var BiquadFilterNode = defineWebAudioComponent(
+  'BiquadFilterNode',
+  ReactComponentMixin,
+  AudioNodeMixin, {
+    createAudioNode: function (audiocontext) {
+      return audiocontext.createBiquadFilter();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      if (typeof props.frequency !== "undefined") {
+        this._audioNode.frequency.value = props.frequency;
+      }
+      if (typeof props.detune !== "undefined") {
+        this._audioNode.detune.value = props.detune;
+      }
+      if (typeof props.Q !== "undefined") {
+        this._audioNode.Q.value = props.Q;
+      }
+      if (typeof props.gain !== "undefined") {
+        this._audioNode.gain.value = props.gain;
+      }
+      if (typeof props.type !== "undefined") {
+        if (_.contains(filtertypes, props.type)) {
+          this._audioNode.type = props.type;
+        } else {
+          // error!
+          throw new Error(
+            "The filtertype in BiquadFilterNode was " + props.type +
+            " but needs to be one of " + filtertypes.join(',')
+          );
+        }
+      }
+    }
+  }
+);
+
+var ConvolverNode = defineWebAudioComponent(
+  'ConvolverNode',
+  ReactComponentMixin,
+  AudioNodeMixin, {
+    createAudioNode: function(audiocontext) {
+      return audiocontext.createConvolver();
+    },
+
+    applySpecificAudioNodeProps: function (oldProps, props) {
+      if (typeof props.buffer !== "undefined") {
+        this._audioNode.buffer = props.buffer;
+      }
+
+      if (typeof props.normalize !== "undefined") {
+        this._audioNode.normalize = props.normalize;
+      }
+      // allow user to specify an array to use as impulse data
+
+      if (typeof props.bufferAsArray !== "undefined") {
+        // only update if the buffer data has changed
+        if (typeof oldProps.bufferAsArray === "undefined" ||
+          oldProps.bufferAsArray !== props.bufferAsArray) {
+            //this._audioNode.normalize = true;
+
+            // buffer configuration values
+            var bufferlength = props.bufferAsArray.length;
+            var bufferchannels = 2;//this._audioNode.numberOfInputs;
+            var buffersamplerate = this._audioNode.context.sampleRate;
+            if (typeof props.bufferAsArraySampleRate !== "undefined") {
+              buffersamplerate = props.bufferAsArraySampleRate;
+            }
+
+            var freshbuffer = this._audioNode.context.createBuffer(bufferchannels, bufferlength, buffersamplerate);
+            var channelindex=0;
+            for (channelindex=0; channelindex < bufferchannels; channelindex++) {
+              freshbuffer.getChannelData(channelindex).set(props.bufferAsArray);
+            }
+            this._audioNode.buffer = freshbuffer;
+          }
+      }
+    }
+  }
+);
 
 //
 // Composite components don't have an _audioNode member. So we have to do some work to find
@@ -599,6 +680,8 @@ module.exports =  {
   AudioBufferSourceNode: AudioBufferSourceNode,
   MediaElementAudioSourceNode: MediaElementAudioSourceNode,
   MediaStreamAudioSourceNode: MediaStreamAudioSourceNode,
+  BiquadFilterNode: BiquadFilterNode,
   GainNode: GainNode,
+  ConvolverNode: ConvolverNode,
   createClass: createWebAudioClass,
 };
