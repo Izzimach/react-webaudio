@@ -119,6 +119,7 @@ gulp.task('watch', ['bundle'], function() {
 
 gulp.task('livereload', ['lint','bundle'], function() {
   var send = require('send');
+  console.log("HTTP server on port " + SERVERPORT);
   require('http').createServer(function(request, response) {
     send(request,request.url, {root:"."}).pipe(response);
   }).listen(SERVERPORT);
