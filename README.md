@@ -41,5 +41,13 @@ Examples are set up in the examples/ directory. You can run
 gulp livereload
 ```
 
+## Caveats
 
+Not all nodes are supported yet. Some are hard to test, while others don't fit into the React data flow process very well.  Still others are still being defined or redefined in the Web Audio spec. In particular:
 
+- Feeding outputs into k-rate parameters isn't supported. Probably it will involve some custom nodes or properties, TBA
+- The channel nodes (ChannelSplitterNode and ChannelMergerNode) are not supported.
+- periodicwave isn't an audio node; if you need one for your OscillatorNode  you can create it manually and pass it in as a 'periodicWave' property. Make sure you set the oscillator type to 'custom'
+- AnalyzerNode and MediaStreamAudioDestinationNode aren't supported.
+- AudioListener and PannerNode aren't supported.
+- Neither ScriptProcessorNode or its successor AudioWorkerNode are supported
