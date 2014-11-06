@@ -41,13 +41,19 @@ function propIsNumberInRange(minvalue, maxvalue) {
 }
 
 //
-// Slider element to display/set some prop
+// Slider element to display/set some filter property
 //
 
 var FilterKnob = React.createClass({
   displayName: 'FilterKnob',
+  propTypes: {
+    minvalue: React.PropTypes.number.isRequired,
+    maxvalue: React.PropTypes.number.isRequired,
+    stepvalue: React.PropTypes.number,
+    newvaluecallback: React.PropTypes.func, // should be required?
+  },
   render: function() {
-    return React.DOM.div();
+    return React.DOM.input({type:'range', min:this.props.minvalue, max:this.props.maxvalue});
   }
 });
 
@@ -58,7 +64,7 @@ var FilterKnob = React.createClass({
 var AudioWidgets = React.createClass({
   displayName: 'AudioWidgets',
   render: function() {
-    return React.DOM.div();
+    return FilterKnob();
   }
 });
 
@@ -76,9 +82,12 @@ var FilterChain = ReactWebAudio.createClass({
       {},
       // ok, this chaining is less than ideal...
       ReactWebAudio.GainNode({gain: this.props.gain},
-        ReactWebAudio.ConvolverNode({bufferAsArray: this.props.reverbImpulseResponse},
-          ReactWebAudio.BiquadFilterNode({frequency: this.props.filterFrequency, type: this.props.filterType},
-            ReactWebAudio.MediaElementAudioSourceNode({audiosourceelement: this.props.audioElement}))))
+        ReactWebAudio.DynamicsCompressorNode({threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
+          ReactWebAudio.WaveShaperNode({curve: this.props.distortionCurve},
+            ReactWebAudio.ConvolverNode({bufferAsArray: this.props.reverbImpulseResponse},
+              ReactWebAudio.DelayNode({delayTime: this.props.delayTime},
+                ReactWebAudio.BiquadFilterNode({frequency: this.props.filterFrequency, type: this.props.filterType},
+                  ReactWebAudio.MediaElementAudioSourceNode({audiosourceelement: this.props.audioElement})))))))
     );
   }
 });
@@ -126,6 +135,22 @@ function buildSimpleReverb(samplelength, echoamplitude) {
 }
 
 //
+// Builds a simple distortion curve
+//
+
+function buildDistortionCurve(distortionamount) {
+  var curvenumpoints = 1000;
+  var zeropointindex = curvenumpoints/2;
+  var curvebuffer = new Float32Array(curvenumpoints);
+  var curveindex=0, inputvalue = 0;
+  for (curveindex=0; curveindex < curvenumpoints; curveindex++) {
+    inputvalue = (curveindex - zeropointindex) / (curvenumpoints * 0.5);
+    curvebuffer[curveindex] = Math.pow(inputvalue,1.1);
+  }
+
+  return curvebuffer;
+}
+//
 // the app state holds various filtering parameters
 //
 
@@ -134,8 +159,11 @@ var g_appstate = {
   gain:1,
   filterType:"lowpass",
   filterFrequency:7000,
-  distortionStrength:3,
-  reverbImpulseResponse: buildSimpleReverb(40000, 0.0)
+  distortionStrength: 0,
+  distortionCurve: null,
+  delayTime:0.2,
+  reverbAmplitude: 0.1,
+  reverbImpulseResponse: null
 };
 
 var g_reactinstance = null;
@@ -154,6 +182,8 @@ function mixerstart() {
 
   // I suppose we could just build this audio source via React...
   g_appstate.audioElement = document.getElementById("audiosource");
+  g_appstate.distortionCurve = buildDistortionCurve(g_appstate.distortionStrength);
+  g_appstate.reverbImpulseResponse = buildSimpleReverb(44100, g_appstate.reverbAmplitude);
 
   g_reactinstance = React.renderComponent(FilterExample(g_appstate), renderelement);
 }
