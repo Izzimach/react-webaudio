@@ -35,11 +35,41 @@ Then ```React``` will appear in the global namespace and the new React Web Audio
 
 ## Examples
 
-Examples are set up in the examples/ directory. You can run
+Build a simple tone source which feeds into its parent AudioContext. Once audio gets
+to the AudioContext node it is rendered to the speakers.
+
+```
+ReactWebAudio.AudioContext(
+  {},
+  ReactWebAudio.OscillatorNode({frequency:this.props.beepfreq, playing:this.props.playbeep}))
+);
+```
+
+Each node feeds audio into the parent node, so a stupidly long filter chain looks like this:
+
+```
+ReactWebAudio.DynamicsCompressorNode(
+  {threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
+  ReactWebAudio.BiquadFilterNode(
+    {frequency: this.props.filterFrequency, type: this.props.filterType},
+    ReactWebAudio.GainNode(
+      {gain: this.props.gain},
+      ReactWebAudio.ConvolverNode(
+        {bufferAsArray: this.props.reverbImpulseResponse},
+        ReactWebAudio.DelayNode(
+          {delayTime: this.props.delayTime},
+          ReactWebAudio.WaveShaperNode(
+            {curve: this.props.distortionCurve},
+            ReactWebAudio.MediaElementAudioSourceNode({audioSourceElement: this.props.audioElement})))))))
+```
+
+For a more complete picture examine the examples/ directory. To try out the examples you can run
 
 ```
 gulp livereload
 ```
+
+and browse to localhost:8080/
 
 ## Caveats
 
