@@ -134,18 +134,18 @@ var FilterChain = ReactWebAudio.createClass({
       {},
       // ok, this chaining is less than ideal...
       ReactWebAudio.DynamicsCompressorNode(
-	{threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
-	ReactWebAudio.BiquadFilterNode(
-	  {frequency: this.props.filterFrequency, type: this.props.filterType},
-	  ReactWebAudio.GainNode(
-	    {gain: this.props.gain},
-	    ReactWebAudio.ConvolverNode(
-	      {bufferAsArray: this.props.reverbImpulseResponse},
-	      ReactWebAudio.DelayNode(
-		{delayTime: this.props.delayTime},
-		ReactWebAudio.WaveShaperNode(
-		  {curve: this.props.distortionCurve},
-		  ReactWebAudio.MediaElementAudioSourceNode({audioSourceElement: this.props.audioElement})))))))
+        {threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
+        ReactWebAudio.BiquadFilterNode(
+          {frequency: this.props.filterFrequency, type: this.props.filterType},
+          ReactWebAudio.GainNode(
+            {gain: this.props.gain},
+            ReactWebAudio.ConvolverNode(
+              {bufferAsArray: this.props.reverbImpulseResponse},
+              ReactWebAudio.DelayNode(
+                {delayTime: this.props.delayTime},
+                ReactWebAudio.WaveShaperNode(
+                  {curve: this.props.distortionCurve},
+                  ReactWebAudio.MediaElementAudioSourceNode({audioSourceElement: this.props.audioElement})))))))
     );
   }
 });
