@@ -15,7 +15,7 @@
 function propIsAudioElement (props, propName, componentName) {
   /* jshint unused: vars */
   var obj = props[propName];
-  if (!obj.nodeName || obj.nodeName.toLowerCase() !== "audio") {
+  if (obj === null || !obj.nodeName || obj.nodeName.toLowerCase() !== "audio") {
      return new Error("Need an audio HTML element for " + propName + " property in component " + componentName);
   }
 }
@@ -81,22 +81,22 @@ var AudioWidgets = React.createClass({
       {},
       FilterKnob(
 	{
-	  parametername:'Filter Frequency (Hz)', 
-	  min:0, max:10000, step:100, 
+	  parametername:'Filter Frequency (Hz)',
+	  min:0, max:10000, step:100,
 	  value: this.props.filterFrequency,
 	  onChange: function(event){ newmixerstate('filterFrequency',Number(event.target.value));}
 	}),
       FilterKnob(
 	{
-	  parametername:'Audio Gain (1=max)', 
-	  min:0.0, max:1.0, step:0.1, 
+	  parametername:'Audio Gain (1=max)',
+	  min:0.0, max:1.0, step:0.1,
 	  value: this.props.gain,
 	  onChange: function(event){ newmixerstate('gain',Number(event.target.value));}
 	}),
       FilterKnob(
 	{
-	  parametername:'Echo Amplitude', 
-	  min:0.0, max:1.0, step:0.1, 
+	  parametername:'Echo Amplitude',
+	  min:0.0, max:1.0, step:0.1,
 	  value: this.props.reverbAmplitude,
 	  onChange: function(event){
 	    newmixerstate('reverbAmplitude',Number(event.target.value));
@@ -104,15 +104,15 @@ var AudioWidgets = React.createClass({
 	}),
       FilterKnob(
 	{
-	  parametername:'Audio Delay', 
-	  min:0.0, max:1.0, step:0.1, 
+	  parametername:'Audio Delay',
+	  min:0.0, max:1.0, step:0.1,
 	  value: this.props.delayTime,
 	  onChange: function(event){ newmixerstate('delayTime',Number(event.target.value)); }
 	}),
       FilterKnob(
 	{
-	  parametername:'Distortion Amount (0=no distortion)', 
-	  min:0.0, max:3.0, step:0.1, 
+	  parametername:'Distortion Amount (0=no distortion)',
+	  min:0.0, max:3.0, step:0.1,
 	  value: this.props.distortionStrength,
 	  onChange: function(event) { newmixerstate('distortionStrength',Number(event.target.value)); }
 	})
@@ -145,7 +145,7 @@ var FilterChain = ReactWebAudio.createClass({
 		{delayTime: this.props.delayTime},
 		ReactWebAudio.WaveShaperNode(
 		  {curve: this.props.distortionCurve},
-		  ReactWebAudio.MediaElementAudioSourceNode({audiosourceelement: this.props.audioElement})))))))
+		  ReactWebAudio.MediaElementAudioSourceNode({audioSourceElement: this.props.audioElement})))))))
     );
   }
 });

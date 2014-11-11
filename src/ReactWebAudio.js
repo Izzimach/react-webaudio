@@ -463,7 +463,7 @@ var MediaElementAudioSourceNode = defineWebAudioComponent(
     createAudioNode: function(audiocontext) {
       /* jshint unused: vars */
       this.setPlayState("ready");
-      return audiocontext.createMediaElementSource(this.props.audiosourceelement);
+      return audiocontext.createMediaElementSource(this.props.audioSourceElement);
     },
 
     applySpecificAudioNodeProps: function (oldProps, props) {
@@ -480,7 +480,7 @@ var MediaStreamAudioSourceNode = defineWebAudioComponent(
     createAudioNode: function(audiocontext) {
       /* jshint unused: vars */
       this.setPlayState("ready");
-      return audiocontext.createMediaStreamSource(this.props.audiosourcestream);
+      return audiocontext.createMediaStreamSource(this.props.audioSourceStream);
     },
 
     applySpecificAudioNodeProps: function (oldProps, props) {
