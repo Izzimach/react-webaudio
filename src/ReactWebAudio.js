@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) 2014 Gary Haussmann
+ * Copyright (c) 2015 Gary Haussmann
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,20 +21,17 @@
 
 "use strict";
 
-var React = require('react/react.js');
+var React = require('react');
 
-var DOMPropertyOperations = require('react/lib/DOMPropertyOperations');
-var ReactComponent = require('react/lib/ReactComponent');
+var ReactUpdates = require('react/lib/ReactUpdates');
 var ReactMultiChild = require('react/lib/ReactMultiChild');
-var ReactDescriptor = require('react/lib/ReactDescriptor');
-var ReactDOMComponent = require('react/lib/ReactDOMComponent');
-var ReactBrowserComponentMixin = require('react/lib/ReactBrowserComponentMixin');
-var ReactComponentMixin = ReactComponent.Mixin;
 
-var mixInto = require('react/lib/mixInto');
-var merge = require('react/lib/merge');
-var shouldUpdateReactComponent = require('react/lib/shouldUpdateReactComponent');
-var instantiateReactComponent = require ('react/lib/instantiateReactComponent');
+var assign = require('react/lib/Object.assign');
+var emptyObject = require('react/lib/emptyObject');
+
+// monkey patch to workaround React's assumption that we're working only with DOM elements
+var monkeypatch = require('./ReactWebAudioMonkeyPatch');
+monkeypatch();
 
 //
 // Generates a React component by combining several mixin components
@@ -42,21 +39,21 @@ var instantiateReactComponent = require ('react/lib/instantiateReactComponent');
 
 function defineWebAudioComponent(name) {
 
-  var ReactWebAudioComponent = function() {};
-  ReactWebAudioComponent.prototype.type = ReactWebAudioComponent;
+  var ReactWebAudioComponent = function() {
+    /* jshint unused: vars */
+    this.node = null;
+    this._mountImage = null;
+    this._audioNode = null;
+    this._audioContext = null;
+    this._audioConnections = null;
+    this._renderedChildren = null;
+  };
+  ReactWebAudioComponent.displayName = name;
   for (var i = 1; i < arguments.length; i++) {
-    mixInto(ReactWebAudioComponent, arguments[i]);
+    assign(ReactWebAudioComponent.prototype, arguments[i]);
   }
 
-  var Constructor = function(props, owner) {
-    this.construct(props,owner);
-  };
-  Constructor.prototype = new ReactWebAudioComponent();
-  Constructor.prototype.constructor = Constructor;
-  Constructor.displayName = name;
-
-  var factory = ReactDescriptor.createFactory(Constructor);
-  return factory;
+  return ReactWebAudioComponent;
 }
 
 //
@@ -104,21 +101,34 @@ function removeAudioContext(rootnodeID, context) {
 // createAudioNode and applySpecificAudioNodeProps
 //
 
-var OutputAudioNodeMixin = merge(ReactComponentMixin, {
+var OutputAudioNodeMixin = {
 
-  mountComponent: function(rootID, transaction, mountDepth) {
-    /* jshint unused: vars */
-    ReactComponentMixin.mountComponent.apply(this, arguments);
-
-    this._audioContext = findAudioContext(rootID);
-    return this.buildAudioNode();
+  construct: function(element) {
+    this._currentElement = element;
+    this._audioNode = null;
+    this._audioContext = null;
+    this._audioConnections = [];
+    this._parentNode = null;
+    this._playState = null;
   },
 
-  receiveComponent: function(nextDescriptor, transaction) {
-    var oldProps = this.props;
-    var props = nextDescriptor.props;
+  getPublicInstance: function() {
+    return this._audioNode;
+  },
 
-    ReactComponent.Mixin.receiveComponent.call(this, nextDescriptor, transaction);
+  mountComponent: function(rootID, transaction, context) {
+    /* jshint unused: vars */
+    var props = this._currentElement.props;
+    this._audioContext = findAudioContext(rootID);
+    var newnode = this.buildAudioNode();
+    this.applyAudioNodeProps({}, props);
+    return newnode;
+  },
+
+  receiveComponent: function(nextElement, transaction, context) {
+    /* jshint unused: vars */
+    var oldProps = this._currentElement.props;
+    var props = nextElement.props;
 
     // might need to rebuild/restart the node
     if (this.shouldRebuildNode && this.shouldRebuildNode(oldProps, props)) {
@@ -128,11 +138,10 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
       this.applySpecificAudioNodeProps(oldProps, props);
     }
 
-    this.props = props;
+    this._currentElement = nextElement;
   },
 
   unmountComponent: function() {
-    ReactComponentMixin.unmountComponent.call(this);
   },
 
   applyAudioNodeProps: function(oldProps, props) {
@@ -140,9 +149,6 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
   },
 
   connectAudio: function (connecttarget) {
-    if (typeof this._audioConnections === "undefined") {
-      this._audioConnections = [];
-    }
     this._audioNode.connect(connecttarget._audioNode);
     this._audioConnections.push(connecttarget);
   },
@@ -157,8 +163,8 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
 
   buildAudioNode: function() {
     this._audioNode = this.createAudioNode(this._audioContext);
-    this.applyAudioNodeProps({}, this.props);
-    this.applySpecificAudioNodeProps({}, this.props);
+    this.applyAudioNodeProps({}, this._currentElement.props);
+    this.applySpecificAudioNodeProps({}, this._currentElement.props);
     return this._audioNode;
   },
 
@@ -169,7 +175,7 @@ var OutputAudioNodeMixin = merge(ReactComponentMixin, {
     );
   },
 
-});
+};
 
 //
 // Audionodes that support start/stop via the "playing" prop.
@@ -213,56 +219,128 @@ var PlayableNodeMixin = {
 
     if (isplaying) {
       switch (this._playState) {
-        case "ready": // ready to play so start it
-          this._audioNode.start();
-          this.setPlayState("playing");
-          break;
-        case "playing": // already playing, so no-op
-          break;
-        case "played": // already played, so we need to make a new node here
-          // this builds a new node and recursively calls applySpecificAudioNodeProps,
-          // which will fall through to the "ready" case and start playing.
-          // so we don't want to call start() here.
-          this.rebuildAudioNode();
-          return;
-        default:
-          // need to generate a warning that the play state was not properly set/initialized
-          break;
+      case "ready": // ready to play so start it
+        this._audioNode.start();
+        this.setPlayState("playing");
+        break;
+      case "playing": // already playing, so no-op
+        break;
+      case "played": // already played, so we need to make a new node here
+        // this builds a new node and recursively calls applySpecificAudioNodeProps,
+        // which will fall through to the "ready" case and start playing.
+        // so we don't want to call start() here.
+        this.rebuildAudioNode();
+	this._audioNode.start();
+	this.setPlayState("playing");
+        return;
+      default:
+        // need to generate a warning that the play state was not properly set/initialized
+        break;
       }
     } else {
       switch (this._playState) {
-        case "ready": // ready means its not running
-          break;
-        case "playing": // stop it!
-          this._audioNode.stop();
-          this.setPlayState("played");
-          break;
-        case "played": // already stopped
-          break;
-        default:
-          break;
+      case "ready": // ready means its not running
+        break;
+      case "playing": // stop it!
+        this._audioNode.stop();
+        this.setPlayState("played");
+        break;
+      case "played": // already stopped
+        break;
+      default:
+        break;
       }
     }
   }
 };
 
 //
+// Audionodes with inputs must manage children
+//
+
+var AudioNodeWithChildren = assign({}, ReactMultiChild.Mixin, {
+
+  moveChild: function(child, toIndex) {
+    /* jshint unused: vars */
+    //var childAudioNode = child._mountImage; // should be an AudioNode
+
+    // for audio order doesn't matter at the moment (will change if we
+    // add sidechaining)
+  },
+
+  createChild: function(child, childAudioNode) {
+    /* jshint unused: vars */
+    // connect the child to our AuduoNode
+    child.connectAudio(this);
+    child._parentNode = this._audioNode;
+  },
+
+  removeChild: function(child) {
+    child.disconnectAudio(this);
+
+    child._mountImage = null;
+    child._parentNode = null;
+  },
+
+  /**
+   * Override to bypass batch updating because it is not necessary.
+   *
+   * @param {?object} nextChildren.
+   * @param {ReactReconcileTransaction} transaction
+   * @internal
+   * @override {ReactMultiChild.Mixin.updateChildren}
+   */
+  updateChildren: function(nextChildren, transaction, context) {
+    this._updateChildren(nextChildren, transaction, context);
+  },
+
+  updateChildrenAtRoot: function(nextChildren, transaction) {
+    this.updateChildren(nextChildren, transaction, emptyObject);
+  },
+
+  // called by any container component after it gets mounted
+
+  mountAndAddChildren: function(children, transaction, context) {
+    var mountedImages = this.mountChildren(
+      children,
+      transaction,
+      context
+    );
+    // Each mount image corresponds to one of the flattened children
+    var i = 0;
+    for (var key in this._renderedChildren) {
+      if (this._renderedChildren.hasOwnProperty(key)) {
+        var child = this._renderedChildren[key];
+        child._mountImage = mountedImages[i];
+        child.connectAudio(this);
+	child._parentNode = this._audioNode;
+        i++;
+      }
+    }
+  },
+
+  mountAndAddChildrenAtRoot: function(children, transaction) {
+    this.mountAndAddChildren(children, transaction, emptyObject);
+  }
+});
+
+//
 // AudioNodes allow for inputs as well as outputs
 //
 
-var AudioNodeMixin = merge(merge(OutputAudioNodeMixin, ReactMultiChild.Mixin), {
+var AudioNodeMixin = assign({}, OutputAudioNodeMixin, AudioNodeWithChildren, {
 
-  mountComponent: function(rootID, transaction, mountDepth) {
+  mountComponent: function(rootID, transaction, context) {
     /* jshint unused: vars */
     var audioNode = OutputAudioNodeMixin.mountComponent.apply(this, arguments);
 
-    this.mountAndAddChildren(this.props.children, transaction);
+    this.mountAndAddChildren(this._currentElement.props.children, transaction, context);
     return audioNode;
   },
 
-  receiveComponent: function(nextComponent, transaction) {
+  receiveComponent: function(nextComponent, transaction, context) {
     OutputAudioNodeMixin.receiveComponent.apply(this, arguments);
-    this.updateChildren(this.props.children, transaction);
+    this.updateChildren(this._currentElement.props.children, transaction, context);
   },
 
   unmountComponent: function() {
@@ -282,61 +360,6 @@ var AudioNodeMixin = merge(merge(OutputAudioNodeMixin, ReactMultiChild.Mixin), {
     if (typeof props.channelInterpretation !== "undefined") {
       audioNode.channelInterpretation = props.channelInterpretation;
     }
-  },
-
-  //
-  // MultiChild methods
-  //
-
-  moveChild: function(child, toIndex) {
-    /* jshint unused: vars */
-    //var childAudioNode = child._mountImage; // should be an AudioNode
-
-    // for audio order doesn't matter at the moment (will change if we
-    // add sidechaining)
-  },
-
-  createChild: function(child, childAudioNode) {
-    /* jshint unused: vars */
-    // connect the child to our AuduoNode
-    child.connectAudio(this);
-  },
-
-  removeChild: function(child) {
-    child.disconnectAudio(this);
-
-    child._mountImage = null;
-  },
-
-  /**
-   * Override to bypass batch updating because it is not necessary.
-   *
-   * @param {?object} nextChildren.
-   * @param {ReactReconcileTransaction} transaction
-   * @internal
-   * @override {ReactMultiChild.Mixin.updateChildren}
-   */
-  updateChildren: function(nextChildren, transaction) {
-    this._updateChildren(nextChildren, transaction);
-  },
-
-  // called by any container component after it gets mounted
-
-  mountAndAddChildren: function(children, transaction) {
-    var mountedImages = this.mountChildren(
-      children,
-      transaction
-    );
-    // Each mount image corresponds to one of the flattened children
-    var i = 0;
-    for (var key in this._renderedChildren) {
-      if (this._renderedChildren.hasOwnProperty(key)) {
-        var child = this._renderedChildren[key];
-        child._mountImage = mountedImages[i];
-        child.connectAudio(this);
-        i++;
-      }
-    }
   }
 });
 
@@ -344,56 +367,57 @@ var AudioNodeMixin = merge(merge(OutputAudioNodeMixin, ReactMultiChild.Mixin), {
 // The 'AudioContext' component creates the Web Audio AudioContext which
 // handles the audio graph and all the mixing/outputting/etc.
 
-var WebAudioContext = defineWebAudioComponent(
-  'WebAudioContext',
-  ReactBrowserComponentMixin,
-  ReactDOMComponent.Mixin,
-  AudioNodeMixin, {
+var WebAudioContext = React.createClass({
+  displayName: 'WebAudioContext',
+  mixins: [AudioNodeWithChildren],
 
-    mountComponent: function(rootID, transaction, mountDepth) {
-      /* jshint unused: vars */
-      AudioNodeMixin.mountComponent.apply(this, arguments);
-      transaction.getReactMountReady().enqueue(this.componentDidMount, this);
+  componentDidMount: function() {
+    var props = this.props;
+    
+    this._audioContext = new AudioContext();
+    this._audioNode = this._audioContext.destination;
+    addAudioContext(this._rootNodeID, this._audioContext);
+    
+    var transaction = ReactUpdates.ReactReconcileTransaction.getPooled();
+    transaction.perform(
+      this.mountAndAddChildrenAtRoot,
+      this,
+      props.children,
+      transaction
+    );
+    ReactUpdates.ReactReconcileTransaction.release(transaction);
+    
+    // invoke an audiocontextcallback if it exists
+    if (this.props.audiocontextcallback) {
+      this.props.audiocontextcallback.call(null, this._audioContext);
+    }
+  },
 
-      // Temporary placeholder
-      var idMarkup = DOMPropertyOperations.createMarkupForID(rootID);
-      return '<div ' + idMarkup + '></div>';
-    },
+  componentDidUpdate: function(oldProps) {
+    var props = this.props;
+    var transaction = ReactUpdates.ReactReconcileTransaction.getPooled();
+    transaction.perform(
+      this.updateChildrenAtRoot,
+      this,
+      this.props.children,
+      transaction
+    );
+    ReactUpdates.ReactReconcileTransaction.release(transaction);
+  },
 
-    createAudioNode: function() {
-      this._audioContext = new AudioContext();
-      addAudioContext(this._rootNodeID, this._audioContext);
-      return this._audioContext.destination;
-    },
+  componentWillUnmount: function() {
+    this.unmountChildren();
+    removeAudioContext(this._rootNodeID, this._audioContext);
+  },
 
-    unmountComponent: function() {
-      removeAudioContext(this._rootNodeID, this._audioContext);
-      AudioNodeMixin.unmountComponent.apply(this,arguments);
-    },
-
-    applySpecificAudioNodeProps: function(oldProps, props) {
-      /* jshint unused: vars */
-    },
-
-    componentDidMount: function() {
-      this.props = this._descriptor.props;
-
-      // invoke an audiocontextcallback if it exists
-      if (this.props.audiocontextcallback) {
-        this.props.audiocontextcallback.call(null, this._audioContext);
-      }
-    },
-
-    // the audiocontext provides a div, so it can mount into a node
-
-    mountComponentIntoNode : ReactComponent.Mixin.mountComponentIntoNode
+  render: function() {
+    return React.createElement('div');
   }
-);
+});
 
 
 var OscillatorNode = defineWebAudioComponent(
   'OscillatorNode',
-  ReactComponentMixin,
   OutputAudioNodeMixin,
   PlayableNodeMixin, {
     createAudioNode : function(audiocontext) {
@@ -424,7 +448,6 @@ var OscillatorNode = defineWebAudioComponent(
 
 var AudioBufferSourceNode = defineWebAudioComponent(
   'AudioBufferSourceNode',
-  ReactComponentMixin,
   OutputAudioNodeMixin,
   PlayableNodeMixin, {
     createAudioNode: function(audiocontext) {
@@ -457,13 +480,12 @@ var AudioBufferSourceNode = defineWebAudioComponent(
 
 var MediaElementAudioSourceNode = defineWebAudioComponent(
   'MediaElementAudioSourceNode',
-  ReactComponentMixin,
   OutputAudioNodeMixin,
   PlayableNodeMixin, {
     createAudioNode: function(audiocontext) {
       /* jshint unused: vars */
       this.setPlayState("ready");
-      return audiocontext.createMediaElementSource(this.props.audioSourceElement);
+      return audiocontext.createMediaElementSource(this._currentElement.props.audioSourceElement);
     },
 
     applySpecificAudioNodeProps: function (oldProps, props) {
@@ -474,13 +496,12 @@ var MediaElementAudioSourceNode = defineWebAudioComponent(
 
 var MediaStreamAudioSourceNode = defineWebAudioComponent(
   'MediaStreamAudioSourceNode',
-  ReactComponentMixin,
   OutputAudioNodeMixin,
   PlayableNodeMixin, {
     createAudioNode: function(audiocontext) {
       /* jshint unused: vars */
       this.setPlayState("ready");
-      return audiocontext.createMediaStreamSource(this.props.audioSourceStream);
+      return audiocontext.createMediaStreamSource(this._currentElement.props.audioSourceStream);
     },
 
     applySpecificAudioNodeProps: function (oldProps, props) {
@@ -491,7 +512,6 @@ var MediaStreamAudioSourceNode = defineWebAudioComponent(
 
 var GainNode = defineWebAudioComponent(
   'GainNode',
-  ReactComponentMixin,
   AudioNodeMixin, {
     createAudioNode: function(audiocontext) {
       return audiocontext.createGain();
@@ -509,7 +529,6 @@ var filtertypes = ["lowpass","highpass","bandpass","lowshelf","highshelf","peaki
 
 var BiquadFilterNode = defineWebAudioComponent(
   'BiquadFilterNode',
-  ReactComponentMixin,
   AudioNodeMixin, {
     createAudioNode: function (audiocontext) {
       return audiocontext.createBiquadFilter();
@@ -545,7 +564,6 @@ var BiquadFilterNode = defineWebAudioComponent(
 
 var ConvolverNode = defineWebAudioComponent(
   'ConvolverNode',
-  ReactComponentMixin,
   AudioNodeMixin, {
     createAudioNode: function(audiocontext) {
       return audiocontext.createConvolver();
@@ -589,7 +607,6 @@ var ConvolverNode = defineWebAudioComponent(
 
 var DelayNode = defineWebAudioComponent(
   'DelayNode',
-  ReactComponentMixin,
   AudioNodeMixin, {
     createAudioNode: function(audiocontext) {
       return audiocontext.createDelay();
@@ -605,7 +622,6 @@ var DelayNode = defineWebAudioComponent(
 
 var DynamicsCompressorNode = defineWebAudioComponent(
   'DynamicsCompressorNode',
-  ReactComponentMixin,
   AudioNodeMixin, {
     createAudioNode: function (audiocontext) {
       return audiocontext.createDynamicsCompressor();
@@ -636,7 +652,6 @@ var DynamicsCompressorNode = defineWebAudioComponent(
 
 var WaveShaperNode = defineWebAudioComponent(
   'WaveShaperNode',
-  ReactComponentMixin,
   AudioNodeMixin, {
     createAudioNode: function (audiocontext) {
       return audiocontext.createWaveShaper();
@@ -652,98 +667,6 @@ var WaveShaperNode = defineWebAudioComponent(
     }
   }
 );
-//
-// Composite components don't have an _audioNode member. So we have to do some work to find
-// the proper AudioNode sometimes.
-//
-
-function findAudioNodeAncestor(componentinstance) {
-  // walk up via _owner until we find something with an AudioNode (_audioNode member)
-  var componentwalker = componentinstance._descriptor._owner;
-  while (typeof componentwalker !== 'undefined') {
-    // no owner? then fail
-    if (typeof componentwalker._renderedComponent._audioNode !== 'undefined') {
-      return componentwalker._renderedComponent._audioNode;
-    }
-    componentwalker = componentwalker._descriptor._owner;
-  }
-
-  // we walked all the way up and found no _audioNode member
-  return undefined;
-}
-
-function findAudioNodeChild(componentinstance) {
-  // walk downwards via _renderedComponent to find something with an AudioNode
-  var componentwalker = componentinstance;
-  while (typeof componentwalker !== 'undefined') {
-    // no owner? then fail
-    if (typeof componentwalker._audioNode !== 'undefined') {
-      return componentwalker._audioNode;
-    }
-    componentwalker = componentwalker._renderedComponent;
-  }
-
-  // we walked all the way up and found no AudioNode
-  return undefined;
-
-}
-
-//
-// time to monkey-patch React!
-//
-// a subtle bug happens when ReactCompositeComponent updates something in-place by
-// modifying HTML markup; since Web Audio objects don't exist as markup the whole thing bombs.
-// we try to fix this by monkey-patching ReactCompositeComponent
-//
-
-function createWebAudioClass(spec) {
-
-  var patchedspec = merge(spec, {
-    updateComponent : function(transaction, prevParentDescriptor) {
-      ReactComponent.Mixin.updateComponent.call(
-        this,
-        transaction,
-        prevParentDescriptor
-      );
-
-      var prevComponentInstance = this._renderedComponent;
-      var prevDescriptor = prevComponentInstance._descriptor;
-      var nextDescriptor = this._renderValidatedComponent();
-
-      if (shouldUpdateReactComponent(prevDescriptor, nextDescriptor)) {
-        prevComponentInstance.receiveComponent(nextDescriptor, transaction);
-      } else {
-        // We can't just update the current component.
-        // So we nuke the current instantiated component and put a new component in
-        // the same place based on the new props.
-        var rootID = this._rootNodeID;
-
-        var prevAudioNode = findAudioNodeChild(this._renderedComponent);
-        var audioNodeAncestor = findAudioNodeAncestor(this);
-
-        // disconnect the current audio node from its target (the Ancestor)
-        prevComponentInstance.unmountComponent();
-        prevAudioNode.disconnect(0); // only one output allowed at the moment
-        this._audioNode = null;
-
-        // create the new object and stuff it into the place vacated by the old object
-        this._renderedComponent = instantiateReactComponent(nextDescriptor);
-        var nextDisplayObject = this._renderedComponent.mountComponent(
-          rootID,
-          transaction,
-          this._mountDepth + 1
-        );
-        this._audioNode = nextDisplayObject;
-        nextDisplayObject.connect(audioNodeAncestor);
-      }
-    }
-  });
-
-  /* jshint validthis: true */
-  var newclass = React.createClass.call(this, patchedspec);
-  return newclass;
-
-}
 
 // module data
 
@@ -758,6 +681,5 @@ module.exports =  {
   ConvolverNode: ConvolverNode,
   DelayNode: DelayNode,
   DynamicsCompressorNode: DynamicsCompressorNode,
-  WaveShaperNode: WaveShaperNode,
-  createClass: createWebAudioClass,
+  WaveShaperNode: WaveShaperNode
 };
