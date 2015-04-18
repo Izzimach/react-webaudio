@@ -56,17 +56,21 @@ var FilterKnob = React.createClass({
   },
   render: function() {
     var sliderprops = _({type:'range'}).extend(this.props).omit('parametername').value();
-    return React.DOM.div({},
-			 this.props.parametername,
-			 React.DOM.input(sliderprops),
-			 this.props.value.toString()
-			);
+    return React.createElement("div",
+			       {},
+			       this.props.parametername,
+			       React.createElement("input",sliderprops),
+			       this.props.value.toString()
+			      );
   }
 });
 
 //
 // Component that displays the HTML GUI elements to control mixing
 //
+var MixerKnob = function(props) {
+  return React.createElement(FilterKnob, props);
+};
 
 var AudioWidgets = React.createClass({
   displayName: 'AudioWidgets',
@@ -79,21 +83,21 @@ var AudioWidgets = React.createClass({
   render: function() {
     return React.DOM.div(
       {},
-      FilterKnob(
+      MixerKnob(
 	{
 	  parametername:'Filter Frequency (Hz)',
 	  min:0, max:10000, step:100,
 	  value: this.props.filterFrequency,
 	  onChange: function(event){ newmixerstate('filterFrequency',Number(event.target.value));}
 	}),
-      FilterKnob(
+      MixerKnob(
 	{
 	  parametername:'Audio Gain (1=max)',
 	  min:0.0, max:1.0, step:0.1,
 	  value: this.props.gain,
 	  onChange: function(event){ newmixerstate('gain',Number(event.target.value));}
 	}),
-      FilterKnob(
+      MixerKnob(
 	{
 	  parametername:'Echo Amplitude',
 	  min:0.0, max:1.0, step:0.1,
@@ -102,14 +106,14 @@ var AudioWidgets = React.createClass({
 	    newmixerstate('reverbAmplitude',Number(event.target.value));
 	  }
 	}),
-      FilterKnob(
+      MixerKnob(
 	{
 	  parametername:'Audio Delay',
 	  min:0.0, max:1.0, step:0.1,
 	  value: this.props.delayTime,
 	  onChange: function(event){ newmixerstate('delayTime',Number(event.target.value)); }
 	}),
-      FilterKnob(
+      MixerKnob(
 	{
 	  parametername:'Distortion Amount (0=no distortion)',
 	  min:0.0, max:3.0, step:0.1,
@@ -125,27 +129,35 @@ var AudioWidgets = React.createClass({
 // the sounds provided
 //
 
-var FilterChain = ReactWebAudio.createClass({
+var FilterChain = React.createClass({
   displayName: 'FilterChain',
   propTypes: {
   },
   render: function() {
-    return ReactWebAudio.AudioContext(
+    return React.createElement(ReactWebAudio.AudioContext,
       {},
       // ok, this chaining is less than ideal...
-      ReactWebAudio.DynamicsCompressorNode(
-        {threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
-        ReactWebAudio.BiquadFilterNode(
-          {frequency: this.props.filterFrequency, type: this.props.filterType},
-          ReactWebAudio.GainNode(
-            {gain: this.props.gain},
-            ReactWebAudio.ConvolverNode(
-              {bufferAsArray: this.props.reverbImpulseResponse},
-              ReactWebAudio.DelayNode(
-                {delayTime: this.props.delayTime},
-                ReactWebAudio.WaveShaperNode(
-                  {curve: this.props.distortionCurve},
-                  ReactWebAudio.MediaElementAudioSourceNode({audioSourceElement: this.props.audioElement})))))))
+      React.createElement(ReactWebAudio.DynamicsCompressorNode,
+	{threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
+	React.createElement(ReactWebAudio.BiquadFilterNode,
+	  {frequency: this.props.filterFrequency, type: this.props.filterType},
+          React.createElement(ReactWebAudio.GainNode,
+	    {gain: this.props.gain},
+	    React.createElement(ReactWebAudio.ConvolverNode,
+	      {bufferAsArray: this.props.reverbImpulseResponse},
+		React.createElement(ReactWebAudio.DelayNode,
+	          {delayTime: this.props.delayTime},
+	          React.createElement(ReactWebAudio.WaveShaperNode,
+	            {curve: this.props.distortionCurve},
+	            React.createElement(ReactWebAudio.MediaElementAudioSourceNode,
+		     {audioSourceElement: this.props.audioElement}
+				       )
+				     )
+				   )
+			       )
+			     )
+			   )
+			 )
     );
   }
 });
@@ -154,7 +166,7 @@ var FilterChain = ReactWebAudio.createClass({
 // Combines the DOM interface and the Web Audio graph
 //
 
-var FilterExample = ReactWebAudio.createClass({
+var FilterExample = React.createClass({
   displayName: 'FilterExample',
   propTypes: {
     audioElement: propIsAudioElement,
@@ -165,12 +177,13 @@ var FilterExample = ReactWebAudio.createClass({
     distortionStrength: propIsNumberInRange(0,10)
   },
   render: function() {
-    return React.DOM.div(
+    return React.createElement(
+      "div",
       {},
       // displays DOM widgets
-      AudioWidgets(this.props),
+      React.createElement(AudioWidgets, this.props),
       // controls audio graph
-      FilterChain(this.props)
+      React.createElement(FilterChain, this.props)
     );
   }
 });
@@ -224,7 +237,10 @@ var g_appstate = {
   reverbImpulseResponse: null
 };
 
-var g_reactinstance = null;
+function renderApp() {
+  var renderelement = document.getElementById("webaudio-div");
+  React.render(React.createElement(FilterExample, g_appstate), renderelement);
+}
 
 // update the named app state with the specified value
 
@@ -242,7 +258,7 @@ function newmixerstate(name, value) {
     updatereverbbuffer();
   }
 
-  g_reactinstance.setProps(g_appstate);
+  renderApp();
 }
 
 function updatedistortioncurve() {
@@ -256,12 +272,11 @@ function updatereverbbuffer() {
 /* jshint unused: false */
 function mixerstart() {
 
-  var renderelement = document.getElementById("webaudio-div");
 
   // I suppose we could just build this audio source via React...
   g_appstate.audioElement = document.getElementById("audiosource");
   updatedistortioncurve();
   updatereverbbuffer();
 
-  g_reactinstance = React.renderComponent(FilterExample(g_appstate), renderelement);
+  renderApp();
 }

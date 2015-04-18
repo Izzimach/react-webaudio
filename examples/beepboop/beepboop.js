@@ -7,15 +7,17 @@
 
 //
 // The top level component
-// props:
+// props you pass in:
 // - beepfreq: frequency to use for beeping
 // - higherFreq: call this func to increase beep frequency
 // - lowerFreq: call this func to decrease beep frequency
 // - startBeep: call this func to start beep sound
 // - stopBeeo: call this func to stop beep sound
 //
+var WebAudioContext = ReactWebAudio.AudioContext;
+var BeepBoop = ReactWebAudio.OscillatorNode;
 
-var ExampleBeeper = ReactWebAudio.createClass({
+var ExampleBeeper = React.createClass({
   displayName: 'ExampleBeeper',
   propTypes: {
     beepfreq: React.PropTypes.number.isRequired,
@@ -27,15 +29,18 @@ var ExampleBeeper = ReactWebAudio.createClass({
   render: function() {
     return React.DOM.div(
       {},
-      React.DOM.div({key:"info"}, "Current frequency: " + this.props.beepfreq),
-      React.DOM.button({key:"b1", onClick:this.props.higherFreq},"higher"),
-      React.DOM.button({key:"b2", onClick:this.props.lowerFreq}, "lower"),
-      React.DOM.button({key:"b3", onClick:this.props.startBeep}, "Start"),
-      React.DOM.button({key:"b4", onClick:this.props.stopBeep}, "Stop"),
-      ReactWebAudio.AudioContext(
-        {},
-        ReactWebAudio.OscillatorNode({frequency:this.props.beepfreq, playing:this.props.playbeep}))
-      );
+      React.createElement("div", {key:"info"}, "Current frequency: " + this.props.beepfreq),
+      React.createElement("button", {key:"b1", onClick: this.props.higherFreq},"higher"),
+      React.createElement("button", {key:"b2", onClick: this.props.lowerFreq}, "lower"),
+      React.createElement("button", {key:"b3", onClick: this.props.startBeep}, "Start"),
+      React.createElement("button", {key:"b4", onClick: this.props.stopBeep}, "Stop"),
+      React.createElement(WebAudioContext,
+			  {},
+			  React.createElement(BeepBoop,
+					      {frequency:this.props.beepfreq, playing:this.props.playbeep}
+					     )
+			 )
+    );
   }
 });
 
@@ -80,5 +85,6 @@ function beepboopstart() {
     rendernewappstate();
   };
 
-  renderinstance = React.renderComponent(ExampleBeeper(appstate), renderelement);
+  var initialGUI = React.createElement(ExampleBeeper, appstate);
+  renderinstance = React.render(initialGUI, renderelement);
 }

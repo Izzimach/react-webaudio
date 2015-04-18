@@ -28,7 +28,7 @@ function loadaudio(audiocontext, filename, loadcompletedcallback) {
 }
 
 //
-// Prop shapes used by both SoundInfoDisplay and AudioGraph components
+// Describes the props required for both SoundInfoDisplay and AudioGraph components
 //
 
 var SoundDataShape = React.PropTypes.shape({
@@ -54,12 +54,14 @@ var SoundInfoDisplay = React.createClass({
   render: function() {
     var infoElements = _.map(this.props.sounds, function(sounddata) {
       var restartthissound = function(){ this.props.restartcallback(sounddata.filename); }.bind(this);
-      return React.DOM.div({key:sounddata.filename,className:'sound-item'},
-                           React.DOM.div({key:sounddata.filename}, "Sound " + sounddata.filename + " playing, times played " + sounddata.timesplayed),
-                           React.DOM.button({key:sounddata.filename + 'button', onClick: restartthissound}, "Restart")
-                           );
+      return React.createElement("div",
+				 {key:sounddata.filename,className:'sound-item'},
+				 React.createElement("div",
+						     {key:sounddata.filename}, "Sound " + sounddata.filename + " playing, times played " + sounddata.timesplayed),
+				 React.createElement("button",{key:sounddata.filename + 'button', onClick: restartthissound}, "Restart")
+				);
     }, this);
-    return React.DOM.div(null, infoElements);
+    return React.createElement("div", null, infoElements);
   }
 });
 
@@ -71,7 +73,7 @@ var SoundInfoDisplay = React.createClass({
 // Component that instantiates a bunch of audio nodes to play the sounds provided
 //
 
-var AudioGraph = ReactWebAudio.createClass({
+var AudioGraph = React.createClass({
   displayName: 'AudioGraph',
   propTypes: {
     audiocontext: React.PropTypes.instanceOf(AudioContext).isRequired,
@@ -80,13 +82,13 @@ var AudioGraph = ReactWebAudio.createClass({
   render: function() {
     var audioElements = this.props.sounds.map(function(sounddata) {
       var soundprops = {
-        key:sounddata.filename,
-        buffer:sounddata.audiobuffer,
-        triggerkey:sounddata.timesplayed
+        key: sounddata.filename,
+        buffer: sounddata.audiobuffer,
+        triggerkey: sounddata.timesplayed
       };
-      return ReactWebAudio.AudioBufferSourceNode(soundprops);
+      return React.createElement(ReactWebAudio.AudioBufferSourceNode, soundprops);
     });
-    return ReactWebAudio.AudioContext({audiocontext:this.props.audiocontext}, audioElements);
+    return React.createElement(ReactWebAudio.AudioContext, {audiocontext:this.props.audiocontext}, audioElements);
   }
 });
 
@@ -94,7 +96,7 @@ var AudioGraph = ReactWebAudio.createClass({
 // Dynamically load audio files (listed in an array)
 // As each file is loaded it gets some start/stop buttons and begins playing
 //
-var LoadAndPlayBuffers = ReactWebAudio.createClass({
+var LoadAndPlayBuffers = React.createClass({
   displayName: 'LoadAndPlayBuffers',
   propTypes: {
     filemanifest: React.PropTypes.arrayOf(React.PropTypes.string).isRequired
@@ -132,11 +134,11 @@ var LoadAndPlayBuffers = ReactWebAudio.createClass({
   },
   render: function() {
     var loadedsounds = this.state.loadedsounds;
-    return React.DOM.div(
-      {},
-      SoundInfoDisplay({sounds:loadedsounds, restartcallback:this.restartSound}),
-      AudioGraph({audiocontext:this.state.audiocontext, sounds:loadedsounds})
-    );
+    return React.createElement("div",
+			       {},
+			       React.createElement(SoundInfoDisplay, {sounds:loadedsounds, restartcallback:this.restartSound}),
+			       React.createElement(AudioGraph, {audiocontext:this.state.audiocontext, sounds:loadedsounds})
+			      );
   }
 });
 
@@ -159,6 +161,6 @@ function playbufferstart() {
 
   var renderinstance = null;
 
-  renderinstance = React.renderComponent(LoadAndPlayBuffers(appstate), renderelement);
+  renderinstance = React.render(React.createElement(LoadAndPlayBuffers, appstate), renderelement);
 }
 

@@ -31,11 +31,13 @@ var FilterKnob = React.createClass({
   },
   render: function() {
     var sliderprops = _({type:'range'}).extend(this.props).omit('parametername').value();
-    return React.DOM.div({},
-       this.props.parametername,
-       React.DOM.input(sliderprops),
-       this.props.value.toString()
-      );
+    return React.createElement(
+      "div",
+      {},
+      this.props.parametername,
+      React.createElement("input", sliderprops),
+      this.props.value.toString()
+    );
   }
 });
 
@@ -51,14 +53,17 @@ var VideoFilterWidgets = React.createClass({
   render: function() {
     // if no video stream is selected, invite the user to pick one
     if (this.props.videoStream === null) {
-      return React.DOM.button({
-        onClick: function() { openvideostream(connectstream); }
-      },
-      "Click to open a video stream from your webcam");
+      return React.createElement(
+	"button",
+	{
+          onClick: function() { openvideostream(connectstream); }
+	},
+	"Click to open a video stream from your webcam");
     } else {
-      return React.DOM.div(
+      return React.createElement(
+	"div",
         {},
-        FilterKnob(
+        React.createElement(FilterKnob,
           {
             parametername:'Audio lowpass filter frequency (Hz)',
             min:0, max:10000, step:100,
@@ -83,11 +88,12 @@ var VideoFilterChain = React.createClass({
     if (this.props.videoStream === null) {
       return null;
     } else {
-      return ReactWebAudio.AudioContext(
-        {},
-        ReactWebAudio.BiquadFilterNode(
-          { frequency: this.props.filterFrequency, type: this.props.filterType },
-          ReactWebAudio.MediaStreamAudioSourceNode({audioSourceStream: this.props.videoStream}))
+      return React.createElement(ReactWebAudio.AudioContext,
+	       {},
+	       React.createElement(ReactWebAudio.BiquadFilterNode,
+		 { frequency: this.props.filterFrequency, type: this.props.filterType },
+		 React.createElement(ReactWebAudio.MediaStreamAudioSourceNode,
+		   {audioSourceStream: this.props.videoStream}))
       );
     }
   }
@@ -103,12 +109,13 @@ var VideoFilterExample = React.createClass({
     filterFrequency: React.PropTypes.number.isRequired,
   },
   render: function() {
-    return React.DOM.div(
+    return React.createElement(
+      "div",
       {},
       // displays DOM widgets
-      VideoFilterWidgets(this.props),
+      React.createElement(VideoFilterWidgets, this.props),
       // controls audio graph
-      VideoFilterChain(this.props)
+      React.createElement(VideoFilterChain, this.props)
     );
   }
 });
@@ -188,5 +195,5 @@ function videostart() {
 
   var renderelement = document.getElementById("webaudio-div");
 
-  g_reactinstance = React.renderComponent(VideoFilterExample(g_appstate), renderelement);
+  g_reactinstance = React.render(React.createElement(VideoFilterExample, g_appstate), renderelement);
 }

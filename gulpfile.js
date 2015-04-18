@@ -84,7 +84,8 @@ gulp.task('help', function() {
 gulp.task('lint', function() {
   return gulp.src([SOURCEGLOB,EXAMPLESGLOB])
     .pipe(jshint())
-    .pipe(jshint.reporter('jshint-stylish'));
+    .pipe(jshint.reporter('jshint-stylish'))
+    .pipe(livereload());
 });
 
 gulp.task('browserify',['lint'], function() {
@@ -109,7 +110,8 @@ gulp.task('bundle', ['browserify'], function() {
 
     .pipe(streamify(uglify({preserveComments:'some'})))
     .pipe(rename(BUILDFILEMIN))
-    .pipe(gulp.dest(BUILDDIR));
+    .pipe(gulp.dest(BUILDDIR))
+    .pipe(livereload());
 });
 
 gulp.task('watch', ['bundle'], function() {
@@ -118,19 +120,18 @@ gulp.task('watch', ['bundle'], function() {
 });
 
 gulp.task('livereload', ['lint','bundle'], function() {
-  var send = require('send');
-  console.log("HTTP server on port " + SERVERPORT);
+  var nodestatic = require('node-static');
+  var fileserver = new nodestatic.Server('.');
   require('http').createServer(function(request, response) {
-    send(request,request.url, {root:"."}).pipe(response);
+    request.addListener('end', function() {
+      fileserver.serve(request,response);
+    }).resume();
   }).listen(SERVERPORT);
 
-  var livereloadserver = livereload();
+  livereload.listen();
 
   gulp.watch([SOURCEGLOB], ['bundle']);
   gulp.watch([EXAMPLESGLOB], ['lint']);
-  gulp.watch(['build/**/*.js', 'examples/**/*.js','examples/**/*.html'], function(file) {
-    livereloadserver.changed(file.path);
-  });
 });
 
 gulp.task('test', ['bundle'], function() {
