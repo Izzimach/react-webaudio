@@ -1,6 +1,6 @@
 {
   "name": "react-webaudio",
-  "version": "0.1.0-EXPERIMENTAL",
+  "version": "0.2.0-EXPERIMENTAL",
   "description": "Construct and update a Web Audio graph using React",
   "keywords": [
     "react",
