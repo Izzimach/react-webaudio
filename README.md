@@ -39,29 +39,40 @@ Build a simple tone source which feeds into its parent AudioContext. Once audio 
 to the AudioContext node it is rendered to the speakers.
 
 ```
-ReactWebAudio.AudioContext(
+React.createElement(ReactWebAudio.AudioContext,
   {},
-  ReactWebAudio.OscillatorNode({frequency:this.props.beepfreq, playing:this.props.playbeep}))
+  React.createElement(ReactWebAudio.OscillatorNode,
+	{frequency:this.props.beepfreq, playing:this.props.playbeep}))
 );
 ```
 
 Each node feeds audio into the parent node, so a stupidly long filter chain looks like this:
 
 ```
-ReactWebAudio.DynamicsCompressorNode(
-  {threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
-  ReactWebAudio.BiquadFilterNode(
-    {frequency: this.props.filterFrequency, type: this.props.filterType},
-    ReactWebAudio.GainNode(
-      {gain: this.props.gain},
-      ReactWebAudio.ConvolverNode(
-        {bufferAsArray: this.props.reverbImpulseResponse},
-        ReactWebAudio.DelayNode(
-          {delayTime: this.props.delayTime},
-          ReactWebAudio.WaveShaperNode(
-            {curve: this.props.distortionCurve},
-            ReactWebAudio.MediaElementAudioSourceNode({audioSourceElement: this.props.audioElement})))))))
+    React.createElement(ReactWebAudio.DynamicsCompressorNode,
+		{threshold:-50, knee:40, ratio:12, reduction:-20, attack:0.1, release:0.1},
+		React.createElement(ReactWebAudio.BiquadFilterNode,
+			{frequency: this.props.filterFrequency, type: this.props.filterType},
+			React.createElement(ReactWebAudio.GainNode,
+				{gain: this.props.gain},
+				React.createElement(ReactWebAudio.ConvolverNode,
+					{bufferAsArray: this.props.reverbImpulseResponse},
+					React.createElement(ReactWebAudio.DelayNode,
+						{delayTime: this.props.delayTime},
+						React.createElement(ReactWebAudio.WaveShaperNode,
+							{curve: this.props.distortionCurve},
+							React.createElement(ReactWebAudio.MediaElementAudioSourceNode,
+								{audioSourceElement: this.props.audioElement}
+							)
+						)
+					)
+				)
+			)
+		)
+	)
 ```
+
+In this case you might want to take advantage of something like [lodash's flowRight](https://lodash.com/docs#flowRight) to compose functions.
 
 For a more complete picture examine the examples/ directory. To try out the examples you can run
 

@@ -4,9 +4,7 @@
   "description": "Construct and update a Web Audio graph using React",
   "keywords": [
     "react",
-    "pixi",
-    "webGL",
-    "canvas"
+    "webaudio"
   ],
   "author": {
     "name": "Gary Haussmann",
