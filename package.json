@@ -23,7 +23,8 @@
     "fbjs": "^0.2.1"
   },
   "peerDependencies": {
-    "react": "0.14.0"
+    "react": "0.14.0",
+    "react-dom": "0.14.0"
   },
   "devDependencies": {
     "babel-core": "^5.8.23",
@@ -39,6 +40,7 @@
     "karma-jasmine": "~0.2.2",
     "send": "~0.10.1",
     "react": "0.14.0",
+    "react-dom": "0.14.0",
     "webpack": "^1.12.1",
     "webpack-dev-server": "^1.10.1"
   },
