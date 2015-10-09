@@ -22,6 +22,7 @@
 "use strict";
 
 var React = require('react');
+var ReactDOM = require('react-dom');
 
 var ReactUpdates = require('react/lib/ReactUpdates');
 var ReactMultiChild = require('react/lib/ReactMultiChild');
@@ -681,5 +682,8 @@ module.exports =  {
   ConvolverNode: ConvolverNode,
   DelayNode: DelayNode,
   DynamicsCompressorNode: DynamicsCompressorNode,
-  WaveShaperNode: WaveShaperNode
+  WaveShaperNode: WaveShaperNode,
+
+  render: ReactDOM.render,
+  unmountComponentAtNode: ReactDOM.unmountComponentAtNode
 };
