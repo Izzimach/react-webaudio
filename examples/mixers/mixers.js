@@ -239,7 +239,7 @@ var g_appstate = {
 
 function renderApp() {
   var renderelement = document.getElementById("webaudio-div");
-  React.render(React.createElement(FilterExample, g_appstate), renderelement);
+  ReactWebAudio.render(React.createElement(FilterExample, g_appstate), renderelement);
 }
 
 // update the named app state with the specified value

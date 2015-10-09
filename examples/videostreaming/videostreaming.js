@@ -68,7 +68,7 @@ var VideoFilterWidgets = React.createClass({
             parametername:'Audio lowpass filter frequency (Hz)',
             min:0, max:10000, step:100,
             value: this.props.filterFrequency,
-            onChange: function(event){ newappstate('filterFrequency',Number(event.target.value));}
+            onChange: function(event){ newAppState('filterFrequency',Number(event.target.value));}
           })
       );
     }
@@ -134,7 +134,7 @@ function connectstream(stream) {
   };
 
   // update app state and let React build the audio graph
-  newappstate('videoStream', stream);
+  newAppState('videoStream', stream);
 }
 
 // fork getUserMedia for multiple browser versions, for those
@@ -180,20 +180,23 @@ function openvideostream(successcallback) {
 // the app state holds the stream and filter parameter(s)
 //
 var g_appstate = {videoStream: null, filterFrequency:1000 };
-var g_reactinstance = null;
 
-// update the named app state with the specified value
+// update the named app state with the specified value, then render
 
-function newappstate(name, value) {
+function renderApp()
+{
+  var renderelement = document.getElementById("webaudio-div");
+  ReactWebAudio.render(React.createElement(VideoFilterExample, g_appstate), renderelement);
+}
+
+function newAppState(name, value) {
   g_appstate[name] = value;
-  g_reactinstance.setProps(g_appstate);
+  renderApp();
 }
 
 
 /* jshint unused: false */
 function videostart() {
 
-  var renderelement = document.getElementById("webaudio-div");
-
-  g_reactinstance = React.render(React.createElement(VideoFilterExample, g_appstate), renderelement);
+  renderApp();
 }

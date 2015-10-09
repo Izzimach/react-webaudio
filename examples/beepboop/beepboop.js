@@ -53,12 +53,10 @@ var ExampleBeeper = React.createClass({
 function beepboopstart() {
   var appstate = {beepfreq:900, playbeep: true};
   var renderelement = document.getElementById("webaudio-div");
-  var renderinstance = null;
 
   function rendernewappstate() {
-    if (renderinstance) {
-      renderinstance.setProps(appstate);
-    }
+    var currentGUI = React.createElement(ExampleBeeper, appstate);
+    ReactWebAudio.render(currentGUI, renderelement);
   }
 
   appstate.lowerFreq = function() {
@@ -85,6 +83,5 @@ function beepboopstart() {
     rendernewappstate();
   };
 
-  var initialGUI = React.createElement(ExampleBeeper, appstate);
-  renderinstance = React.render(initialGUI, renderelement);
+  rendernewappstate();
 }

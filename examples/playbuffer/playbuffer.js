@@ -94,7 +94,7 @@ var AudioGraph = React.createClass({
 
 //
 // Dynamically load audio files (listed in an array)
-// As each file is loaded it gets some start/stop buttons and begins playing
+// As each file is loaded it gets a GUI with start/stop buttons and begins playing
 //
 var LoadAndPlayBuffers = React.createClass({
   displayName: 'LoadAndPlayBuffers',
@@ -142,13 +142,12 @@ var LoadAndPlayBuffers = React.createClass({
   }
 });
 
-//
-// the app state holds the current beep frequency and whether it's playing. Buttons in the component
-// will modify the frequency and start/stop the beep noise.
-//
 
 /* jshint unused:false */
 function playbufferstart() {
+  // the app state starts out with a manifest of files to load
+  // and none of them loaded.
+  
   var manifest = [
     "../assets/16847__bjornredtail__vacuum-startup.wav",
     "../assets/14401__acclivity__chimebar-c-low-proc.wav",
@@ -159,8 +158,6 @@ function playbufferstart() {
 
   var renderelement = document.getElementById("webaudio-div");
 
-  var renderinstance = null;
-
-  renderinstance = React.render(React.createElement(LoadAndPlayBuffers, appstate), renderelement);
+  ReactWebAudio.render(React.createElement(LoadAndPlayBuffers, appstate), renderelement);
 }
 
