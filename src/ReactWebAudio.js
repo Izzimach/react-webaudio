@@ -27,7 +27,7 @@ var ReactUpdates = require('react/lib/ReactUpdates');
 var ReactMultiChild = require('react/lib/ReactMultiChild');
 
 var assign = require('react/lib/Object.assign');
-var emptyObject = require('react/lib/emptyObject');
+var emptyObject = require('fbjs/lib/emptyObject');
 
 // monkey patch to workaround React's assumption that we're working only with DOM elements
 var monkeypatch = require('./ReactWebAudioMonkeyPatch');
