@@ -51,11 +51,14 @@ Build a simple tone source which feeds into its parent AudioContext. Once audio 
 to the AudioContext node it is rendered to the speakers.
 
 ```
-React.createElement(ReactWebAudio.AudioContext,
-  {},
-  React.createElement(ReactWebAudio.OscillatorNode,
-	{frequency:this.props.beepfreq, playing:this.props.playbeep}))
+ReactWebAudio.render(
+    React.createElement(ReactWebAudio.AudioContext,
+        {},
+        React.createElement(ReactWebAudio.OscillatorNode,
+        {frequency:this.props.beepfreq, playing:this.props.playbeep})),
+    mountelement
 );
+    
 ```
 
 Each node feeds audio into the parent node, so a stupidly long filter chain looks like this:
