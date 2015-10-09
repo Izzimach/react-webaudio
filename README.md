@@ -7,24 +7,36 @@ Each component in the React component tree represents an AudioNode. Audio is
 propagated up the tree branches until it reaches the render root, where the
 sound data is fed into an AudioDestinationNode and then played to audio output.
 
-## Installation
+## Installation and Building
 
-You will need node, npm, and bower. You should probably install gulp globally as well.
+React-WebAudio uses React 0.14.
 
-```
-npm install -g gulp
-npm install -g bower
-npm install
-bower install
-```
+Use As a Package
+----------------
 
-Simply running
+To use it as an npm package just install it
 
 ```
-gulp
+npm install react-webaudio
 ```
 
-Will package up the react-webaudio components along with React and put the result in build/react-webaudio.js. If you include this into your webpage via
+You will need to do something like
+```
+var ReactWebAudio = require('react-webaudio')
+```
+
+and then you can create and render audio graphs.
+
+Build as standalone
+-------------------
+
+Checkout from git and run
+
+```
+npm run build
+```
+
+This will package up the react-webaudio components along with React and put the result in build/react-webaudio.js. If you include this into your webpage via
 a script tag:
 
 ```
@@ -77,8 +89,9 @@ In this case you might want to take advantage of something like [lodash's flowRi
 For a more complete picture examine the examples/ directory. To try out the examples you can run
 
 ```
-gulp livereload
+npm run dev
 ```
+
 
 and browse to localhost:8080/
 
